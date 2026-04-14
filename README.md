@@ -1,36 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Finwy Web
 
-## Getting Started
+**Next.js (App Router) frontend only** — no database, Prisma, or server-side business logic in this package. UI calls your **REST API** using `NEXT_PUBLIC_API_URL`.
 
-First, run the development server:
+## Setup
 
 ```bash
+npm install
+cp .env.example .env.local
+# Set NEXT_PUBLIC_API_URL to your backend (e.g. http://localhost:4000/api)
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## API contract (align your backend)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The app expects JSON and (after login) sends:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+`Authorization: Bearer <accessToken>`
 
-## Learn More
+Login response should include **`accessToken`** (or **`token`**) plus **`user`** (`id`, `email`, `name`, `role`).
 
-To learn more about Next.js, take a look at the following resources:
+| UI area | Method | Path (appended to `NEXT_PUBLIC_API_URL`) |
+|--------|--------|------------------------------------------|
+| Login | POST | `/auth/login` |
+| Register | POST | `/auth/register` |
+| Verify OTP | POST | `/auth/verify-otp` |
+| Forgot password | POST | `/auth/forgot-password` |
+| Reset password | POST | `/auth/reset-password` |
+| Logout | POST | `/auth/logout` |
+| Current user | GET | `/auth/me` |
+| Contact | POST | `/contact` |
+| Dashboard summary | GET | `/dashboard/summary` |
+| Wallet deposit | POST | `/wallet/deposit` |
+| Wallet transfer | POST | `/wallet/transfer` |
+| Transactions | GET | `/wallet/transactions` |
+| Notifications | GET, PATCH | `/notifications` |
+| Profile | PATCH | `/profile` |
+| Admin analytics | GET | `/admin/analytics` |
+| Admin users | GET | `/admin/users` |
+| Admin user block | PATCH | `/admin/users/:id` |
+| Admin transactions | GET | `/admin/transactions` |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Paths are suggestions — adjust your backend to match, or refactor `src/lib/api-client.ts` and page `apiFetch(...)` calls.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Token storage
 
-## Deploy on Vercel
+Access tokens are stored in **`localStorage`** under `finwy_access_token` (see `src/lib/config.ts`). For production, consider httpOnly cookies set by your API domain and CORS configuration.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Docker
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Optional production image: see `Dockerfile` (standalone Next build). No database container is required for this app.
+
+## Scripts
+
+| Command | Description |
+|--------|-------------|
+| `npm run dev` | Development server |
+| `npm run build` | Production build |
+| `npm run start` | Run production server |
