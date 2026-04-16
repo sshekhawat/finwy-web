@@ -6,7 +6,11 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const data = registerSchema.parse(body);
-    const result = registerUser(data);
+    const result = registerUser({
+      email: data.email,
+      password: data.password,
+      name: `${data.firstName} ${data.lastName}`.trim(),
+    });
 
     // OTP is returned only for demo/dev flow.
     return NextResponse.json(

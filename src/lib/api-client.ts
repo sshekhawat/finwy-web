@@ -27,7 +27,7 @@ export async function apiFetch(
   const base = getApiBaseUrl();
   if (!base) {
     throw new Error(
-      "Set NEXT_PUBLIC_API_URL in .env.local to your backend base URL (e.g. http://localhost:4000/api).",
+      "Set NEXT_PUBLIC_API_URL in .env.local to your backend API prefix (e.g. http://localhost:3005/api/v1).",
     );
   }
   const url = `${base}${path.startsWith("/") ? path : `/${path}`}`;
