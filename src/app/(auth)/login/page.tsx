@@ -8,7 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { loginSchema } from "@/lib/validators/auth";
 import type { z } from "zod";
-import { apiFetch, isApiConfigured, setStoredAccessToken } from "@/lib/api-client";
+import { apiFetch, setStoredAccessToken } from "@/lib/api-client";
 import { useAuthStore } from "@/stores/auth-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,13 +24,6 @@ import {
 
 type Form = z.infer<typeof loginSchema>;
 
-const DEMO_USER = {
-  id: "demo-user",
-  email: "demo@finwy.local",
-  name: "Demo User",
-  role: "USER",
-};
-
 function LoginForm() {
   const router = useRouter();
   const next = "/dashboard";
@@ -43,14 +36,6 @@ function LoginForm() {
   });
 
   async function onSubmit(data: Form) {
-    if (!isApiConfigured()) {
-      setUser(DEMO_USER);
-      setStoredAccessToken("demo-token");
-      toast.success("Demo login successful");
-      router.push(next);
-      router.refresh();
-      return;
-    }
     setLoading(true);
     try {
       const res = await apiFetch("/auth/login", {
@@ -76,14 +61,7 @@ function LoginForm() {
       router.push(next);
       router.refresh();
     } catch (e) {
-      // Frontend-only fallback: still allow navigating dashboard for static/demo use.
-      setUser(DEMO_USER);
-      setStoredAccessToken("demo-token");
-      toast.warning(
-        e instanceof Error ? `${e.message}. Opening demo dashboard.` : "Opening demo dashboard.",
-      );
-      router.push(next);
-      router.refresh();
+      toast.error(e instanceof Error ? e.message : "Login failed");
     } finally {
       setLoading(false);
     }

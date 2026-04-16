@@ -1,8 +1,9 @@
-/**
- * Public env only — this app has no server-side database; all data comes from your API.
- */
 export function getApiBaseUrl(): string {
   const base = process.env.NEXT_PUBLIC_API_URL?.trim() ?? "";
+  if (!base) {
+    // Default to same-origin Next.js route handlers for local auth APIs.
+    return "/api";
+  }
   return base.replace(/\/$/, "");
 }
 
