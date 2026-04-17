@@ -7,7 +7,7 @@
 ```bash
 npm install
 cp .env.example .env.local
-# Set NEXT_PUBLIC_API_URL to your backend (e.g. http://localhost:4000/api)
+# Set NEXT_PUBLIC_API_URL to your backend API prefix, including /api/v1 (e.g. http://localhost:3005/api/v1)
 npm run dev
 ```
 

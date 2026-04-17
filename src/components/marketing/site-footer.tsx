@@ -1,7 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import { Flame, MapPin, Phone } from "lucide-react";
+import { useAuthSession } from "@/components/providers/auth-session-provider";
 
 export function SiteFooter() {
+  const { ready, isAuthenticated } = useAuthSession();
+
   return (
     <footer className="bg-[#050a14] text-white">
       <div className="border-b border-white/10 bg-black/40 py-8">
@@ -57,7 +62,9 @@ export function SiteFooter() {
               { href: "/pricing", label: "Pricing" },
               { href: "/about", label: "About" },
               { href: "/contact", label: "Contact" },
-              { href: "/login", label: "Dashboard login" },
+              ...(ready && isAuthenticated
+                ? [{ href: "/dashboard", label: "Dashboard" as const }]
+                : [{ href: "/login", label: "Dashboard login" as const }]),
             ].map((l) => (
               <li key={l.href}>
                 <Link href={l.href} className="hover:text-orange-400">
