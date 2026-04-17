@@ -13,8 +13,8 @@ type AuthState = {
 };
 
 /**
- * Client-only auth display state. Access tokens live in localStorage (`finwy_access_token`)
- * via `setStoredAccessToken` in `api-client.ts` — align with your backend’s login response.
+ * Client-only auth display state. Short-lived access JWT is kept in sessionStorage; refresh JWT
+ * is stored in an httpOnly cookie via `POST /api/auth/session` (`establishBrowserSession`).
  */
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,

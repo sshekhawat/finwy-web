@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Flame, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { useAuthSession } from "@/components/providers/auth-session-provider";
 import { cn } from "@/lib/utils";
 
 const nav = [
@@ -20,6 +21,7 @@ const nav = [
 export function SiteHeader() {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
+  const { ready, isAuthenticated } = useAuthSession();
 
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 shadow-sm backdrop-blur-md dark:border-border dark:bg-background/95">
@@ -66,15 +68,28 @@ export function SiteHeader() {
             <Sun className="size-4 dark:hidden" />
             <Moon className="hidden size-4 dark:inline" />
           </Button>
-          <Link
-            className={cn(
-              buttonVariants({ size: "default" }),
-              "hidden whitespace-nowrap bg-[#1e4fd6] px-5 text-sm hover:bg-[#1a45c0] sm:inline-flex",
-            )}
-            href="/login"
-          >
-            Login / Register
-          </Link>
+          {ready &&
+            (isAuthenticated ? (
+              <Link
+                className={cn(
+                  buttonVariants({ size: "default" }),
+                  "hidden whitespace-nowrap bg-[#1e4fd6] px-5 text-sm hover:bg-[#1a45c0] sm:inline-flex",
+                )}
+                href="/dashboard"
+              >
+                Dashboard
+              </Link>
+            ) : (
+              <Link
+                className={cn(
+                  buttonVariants({ size: "default" }),
+                  "hidden whitespace-nowrap bg-[#1e4fd6] px-5 text-sm hover:bg-[#1a45c0] sm:inline-flex",
+                )}
+                href="/login"
+              >
+                Login / Register
+              </Link>
+            ))}
         </div>
       </div>
     </header>

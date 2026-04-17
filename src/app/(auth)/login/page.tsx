@@ -8,7 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { loginSchema, verifyEmailOtpSchema } from "@/lib/validators/auth";
 import type { z } from "zod";
-import { apiFetch, isApiConfigured, setStoredAccessToken } from "@/lib/api-client";
+import { apiFetch, establishBrowserSession, isApiConfigured, setStoredAccessToken } from "@/lib/api-client";
 import { readApiError, callResendEmailOtp } from "@/lib/auth-http";
 import { useAuthStore } from "@/stores/auth-store";
 import { Button } from "@/components/ui/button";
@@ -76,13 +76,14 @@ function LoginForm() {
     defaultValues: { email: "", otp: "" },
   });
 
-  function applyAuthSuccess(data: {
+  async function applyAuthSuccess(data: {
     accessToken?: string;
     refreshToken?: string;
     user?: LoginUser;
   }) {
     const bearer = data.accessToken;
     if (bearer) setStoredAccessToken(bearer);
+    await establishBrowserSession(data.refreshToken);
     if (data.user) setUser(mapLoginUser(data.user));
   }
 
@@ -110,7 +111,7 @@ function LoginForm() {
         if (!payload.success || !payload.data?.accessToken) {
           throw new Error("Unexpected login response");
         }
-        applyAuthSuccess(payload.data);
+        await applyAuthSuccess(payload.data);
         toast.success("Signed in");
         router.push(next);
         router.refresh();
@@ -165,7 +166,7 @@ function LoginForm() {
       if (!payload.success || !payload.data?.accessToken) {
         throw new Error("Unexpected verify response");
       }
-      applyAuthSuccess(payload.data);
+      await applyAuthSuccess(payload.data);
       toast.success("Email verified. You are signed in.");
       setOtpOpen(false);
       router.push(next);

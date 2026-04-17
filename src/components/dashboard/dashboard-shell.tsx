@@ -4,7 +4,7 @@ import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, User } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { apiFetch, setStoredAccessToken } from "@/lib/api-client";
+import { logoutSession } from "@/lib/api-client";
 import { useAuthStore } from "@/stores/auth-store";
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
 import { DashboardHeader } from "@/components/dashboard/header";
@@ -25,12 +25,7 @@ export function DashboardShell({
         collapsed={collapsed}
         onToggle={() => setCollapsed((prev) => !prev)}
         onLogout={async () => {
-          try {
-            await apiFetch("/auth/logout", { method: "POST" });
-          } catch {
-            // ignore and force local logout
-          }
-          setStoredAccessToken(null);
+          await logoutSession();
           setUser(null);
           window.location.href = "/login";
         }}

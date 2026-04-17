@@ -6,11 +6,10 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { registerSchema, verifyEmailOtpSchema } from "@/lib/validators/auth";
+import { registerSchema } from "@/lib/validators/auth";
 import type { z } from "zod";
-import { apiFetch, isApiConfigured, setStoredAccessToken } from "@/lib/api-client";
+import { apiFetch, isApiConfigured } from "@/lib/api-client";
 import { readApiError, callResendEmailOtp } from "@/lib/auth-http";
-import { useAuthStore } from "@/stores/auth-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,14 +20,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 type RegForm = z.infer<typeof registerSchema>;
@@ -65,10 +56,7 @@ function RequiredStar() {
 
 export default function RegisterPage() {
   const router = useRouter();
-  const setUser = useAuthStore((s) => s.setUser);
 
-  const [otpOpen, setOtpOpen] = useState(false);
-  const [registeredEmail, setRegisteredEmail] = useState("");
   const [loading, setLoading] = useState(false);
   /** Default true so the form never sits in a blocked “loading” state if the preflight request fails. */
   const [requiresReferral, setRequiresReferral] = useState(true);
@@ -90,11 +78,6 @@ export default function RegisterPage() {
 
   const referralId = regForm.watch("referralId");
   const debouncedReferral = useDebounced(referralId?.trim() ?? "", 450);
-
-  const otpForm = useForm<z.infer<typeof verifyEmailOtpSchema>>({
-    resolver: zodResolver(verifyEmailOtpSchema),
-    defaultValues: { email: "", otp: "" },
-  });
 
   useEffect(() => {
     if (!isApiConfigured()) return;
@@ -195,8 +178,6 @@ export default function RegisterPage() {
           throw new Error(readApiError(json, "Registration failed"));
         }
         const emailNorm = data.email.trim().toLowerCase();
-        setRegisteredEmail(emailNorm);
-        otpForm.reset({ email: emailNorm, otp: "" });
 
         const resent = await callResendEmailOtp(emailNorm);
         if (!resent.ok) {
@@ -210,85 +191,15 @@ export default function RegisterPage() {
         } else {
           toast.success(resent.message);
         }
-        setOtpOpen(true);
+        router.push(`/verify-otp?email=${encodeURIComponent(emailNorm)}`);
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Registration failed");
       } finally {
         setLoading(false);
       }
     },
-    [requiresReferral, referralResult?.valid, otpForm],
+    [requiresReferral, referralResult?.valid, router],
   );
-
-  async function onVerifyOtp(form: z.infer<typeof verifyEmailOtpSchema>) {
-    setLoading(true);
-    try {
-      const res = await apiFetch("/auth/verify-email-otp", {
-        method: "POST",
-        body: JSON.stringify({
-          email: form.email.trim().toLowerCase(),
-          otp: form.otp.trim(),
-        }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(readApiError(json, "Verification failed"));
-      }
-      const payload = json as {
-        success?: boolean;
-        data?: {
-          accessToken?: string;
-          user?: {
-            id: string;
-            email: string;
-            firstName: string;
-            lastName: string;
-            role: string;
-          };
-        };
-      };
-      if (payload.data?.accessToken) setStoredAccessToken(payload.data.accessToken);
-      if (payload.data?.user) {
-        const u = payload.data.user;
-        const name = `${u.firstName} ${u.lastName}`.trim();
-        setUser({
-          id: u.id,
-          email: u.email,
-          name: name.length > 0 ? name : null,
-          role: u.role,
-        });
-      }
-      toast.success("Email verified. You are signed in.");
-      setOtpOpen(false);
-      router.push("/dashboard");
-      router.refresh();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Verification failed");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function resendOtp() {
-    if (!registeredEmail) return;
-    setLoading(true);
-    try {
-      const out = await callResendEmailOtp(registeredEmail);
-      if (!out.ok) {
-        toast.error(out.message);
-        return;
-      }
-      if (out.emailDispatched === false) {
-        toast.warning("OTP was updated, but email was not sent (configure SMTP on the API server).");
-      } else {
-        toast.success(out.message);
-      }
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not resend");
-    } finally {
-      setLoading(false);
-    }
-  }
 
   const sponsorInvalid = Boolean(
     requiresReferral &&
@@ -444,23 +355,6 @@ export default function RegisterPage() {
                 )}
               </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="childSide" className="text-sm font-medium">
-                  Position (binary side)
-                </Label>
-                <select
-                  id="childSide"
-                  className={cn(
-                    "flex h-9 w-full rounded-md border border-foreground/25 bg-white px-3 py-1 text-sm shadow-xs dark:bg-background",
-                    "outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
-                  )}
-                  {...regForm.register("childSide")}
-                >
-                  <option value="L">Left (L)</option>
-                  <option value="R">Right (R)</option>
-                </select>
-              </div>
-
               <Button
                 type="submit"
                 className="h-10 w-full rounded-md font-sans font-medium"
@@ -477,44 +371,6 @@ export default function RegisterPage() {
           </CardFooter>
         </Card>
       </div>
-
-      <Dialog open={otpOpen} onOpenChange={setOtpOpen}>
-        <DialogContent showCloseButton className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Verify your email</DialogTitle>
-            <DialogDescription>
-              A new verification code was requested for <strong>{registeredEmail}</strong> right after you signed up.
-              Enter the 6-digit code from your inbox, then continue — you will be signed in and taken to the
-              dashboard.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={otpForm.handleSubmit(onVerifyOtp)} className="space-y-4">
-            <input type="hidden" {...otpForm.register("email")} />
-            <div className="space-y-2">
-              <Label htmlFor="otp">Email OTP</Label>
-              <Input
-                id="otp"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                placeholder="000000"
-                maxLength={6}
-                {...otpForm.register("otp")}
-              />
-              {otpForm.formState.errors.otp && (
-                <p className="text-xs text-destructive">{otpForm.formState.errors.otp.message}</p>
-              )}
-            </div>
-            <DialogFooter className="gap-2 sm:justify-between">
-              <Button type="button" variant="outline" onClick={resendOtp} disabled={loading}>
-                Resend code
-              </Button>
-              <Button type="submit" disabled={loading}>
-                {loading ? "…" : "Verify & continue"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }
