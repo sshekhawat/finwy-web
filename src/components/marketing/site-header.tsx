@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Flame, Moon, Sun } from "lucide-react";
+import { Flame, Menu, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { useAuthSession } from "@/components/providers/auth-session-provider";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
 const nav = [
@@ -57,6 +58,50 @@ export function SiteHeader() {
           })}
         </nav>
         <div className="flex items-center gap-2">
+          <Sheet>
+            <SheetTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="text-[#0c1e45] lg:hidden dark:text-foreground"
+                  aria-label="Open navigation menu"
+                />
+              }
+            >
+              <Menu className="size-5" />
+            </SheetTrigger>
+            <SheetContent side="left" className="w-[85%] max-w-xs bg-white p-0 dark:bg-background">
+              <SheetHeader className="border-b border-slate-200 dark:border-border">
+                <SheetTitle>Finwy</SheetTitle>
+                <SheetDescription>Mobile navigation</SheetDescription>
+              </SheetHeader>
+              <div className="space-y-1 p-4">
+                {nav.map((item) => {
+                  const active =
+                    item.href.startsWith("/#") && pathname === "/"
+                      ? false
+                      : pathname === item.href ||
+                        (item.href !== "/" && pathname.startsWith(item.href));
+                  return (
+                    <Link
+                      key={`m-${item.href}-${item.label}`}
+                      href={item.href}
+                      className={cn(
+                        "block rounded-lg px-3 py-2 text-sm font-medium",
+                        active
+                          ? "bg-slate-100 text-[#0c1e45] dark:bg-muted dark:text-foreground"
+                          : "text-[#0c1e45]/80 hover:bg-slate-100 dark:text-muted-foreground dark:hover:bg-muted dark:hover:text-foreground",
+                      )}
+                    >
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            </SheetContent>
+          </Sheet>
           <Button
             type="button"
             variant="ghost"
@@ -70,25 +115,53 @@ export function SiteHeader() {
           </Button>
           {ready &&
             (isAuthenticated ? (
-              <Link
-                className={cn(
-                  buttonVariants({ size: "default" }),
-                  "hidden whitespace-nowrap bg-[#1e4fd6] px-5 text-sm hover:bg-[#1a45c0] sm:inline-flex",
-                )}
-                href="/dashboard"
-              >
-                Dashboard
-              </Link>
+              <>
+                <Link
+                  className={cn(
+                    buttonVariants({ size: "sm", variant: "outline" }),
+                    "whitespace-nowrap border-slate-300 px-3 text-xs sm:hidden",
+                  )}
+                  href="/dashboard"
+                >
+                  Dashboard
+                </Link>
+                <Link
+                  className={cn(
+                    buttonVariants({ size: "default" }),
+                    "hidden whitespace-nowrap bg-[#1e4fd6] px-5 text-sm hover:bg-[#1a45c0] sm:inline-flex",
+                  )}
+                  href="/dashboard"
+                >
+                  Dashboard
+                </Link>
+              </>
             ) : (
-              <Link
-                className={cn(
-                  buttonVariants({ size: "default" }),
-                  "hidden whitespace-nowrap bg-[#1e4fd6] px-5 text-sm hover:bg-[#1a45c0] sm:inline-flex",
-                )}
-                href="/login"
-              >
-                Login / Register
-              </Link>
+              <>
+                <Link
+                  className={cn(buttonVariants({ size: "sm", variant: "ghost" }), "px-2 text-xs sm:hidden")}
+                  href="/login"
+                >
+                  Login
+                </Link>
+                <Link
+                  className={cn(
+                    buttonVariants({ size: "sm", variant: "outline" }),
+                    "border-slate-300 px-2 text-xs sm:hidden",
+                  )}
+                  href="/register"
+                >
+                  Register
+                </Link>
+                <Link
+                  className={cn(
+                    buttonVariants({ size: "default" }),
+                    "hidden whitespace-nowrap bg-[#1e4fd6] px-5 text-sm hover:bg-[#1a45c0] sm:inline-flex",
+                  )}
+                  href="/login"
+                >
+                  Login / Register
+                </Link>
+              </>
             ))}
         </div>
       </div>
