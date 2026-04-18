@@ -12,13 +12,7 @@ import { apiFetch, isApiConfigured } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { AuthPageShell } from "@/components/auth/auth-page-shell";
 
 type Form = z.infer<typeof resetPasswordSchema>;
 
@@ -59,35 +53,66 @@ function ResetForm() {
   }
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader>
-        <CardTitle>Reset password</CardTitle>
-        <CardDescription>Choose a new password for your account.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <input type="hidden" {...form.register("token")} />
-          <div className="space-y-2">
-            <Label htmlFor="password">New password</Label>
-            <Input id="password" type="password" {...form.register("password")} />
-          </div>
-          <Button type="submit" className="w-full" disabled={loading || !token}>
-            {loading ? "…" : "Update password"}
-          </Button>
-        </form>
-      </CardContent>
-      <CardContent className="pt-0">
-        <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground">
-          Sign in
+    <AuthPageShell>
+      <div className="space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-foreground">Set new password</h1>
+        <p className="text-sm text-muted-foreground">
+          Choose a strong password you haven’t used here before. You’ll be signed out of other sessions.
+        </p>
+      </div>
+
+      {!token ? (
+        <p className="mt-6 rounded-xl border border-amber-200/80 bg-amber-50/80 px-4 py-3 text-sm text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100">
+          This link is missing a reset token. Open the link from your email again, or request a new reset from{" "}
+          <Link href="/forgot-password" className="font-semibold underline underline-offset-2">
+            forgot password
+          </Link>
+          .
+        </p>
+      ) : null}
+
+      <form onSubmit={form.handleSubmit(onSubmit)} className="mt-8 space-y-5">
+        <input type="hidden" {...form.register("token")} />
+        <div className="space-y-2">
+          <Label htmlFor="password" className="text-sm font-medium">
+            New password
+          </Label>
+          <Input
+            id="password"
+            type="password"
+            autoComplete="new-password"
+            className="h-11 rounded-xl border-slate-200 bg-slate-50/80 dark:border-input dark:bg-background"
+            {...form.register("password")}
+          />
+          <p className="text-xs text-muted-foreground">Use at least 6 characters.</p>
+        </div>
+        <Button
+          type="submit"
+          className="h-11 w-full rounded-xl bg-[#6C63FF] text-base font-semibold text-white shadow-md shadow-[#6C63FF]/25 hover:bg-[#5b54e6]"
+          disabled={loading || !token}
+        >
+          {loading ? "Updating…" : "Update password"}
+        </Button>
+      </form>
+
+      <p className="mt-8 border-t border-slate-100 pt-6 text-center text-sm dark:border-border">
+        <Link href="/login" className="font-semibold text-[#6C63FF] hover:text-[#5b54e6] hover:underline">
+          Back to sign in
         </Link>
-      </CardContent>
-    </Card>
+      </p>
+    </AuthPageShell>
   );
 }
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense fallback={<p className="text-sm text-muted-foreground">Loading…</p>}>
+    <Suspense
+      fallback={
+        <AuthPageShell>
+          <p className="py-8 text-center text-sm text-muted-foreground">Loading…</p>
+        </AuthPageShell>
+      }
+    >
       <ResetForm />
     </Suspense>
   );

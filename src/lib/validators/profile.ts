@@ -2,11 +2,8 @@ import { z } from "zod";
 
 const passwordRules = z
   .string()
-  .min(12, "Minimum 12 characters")
-  .max(128)
-  .regex(/[A-Z]/, "Must contain uppercase")
-  .regex(/[a-z]/, "Must contain lowercase")
-  .regex(/[0-9]/, "Must contain digit");
+  .min(6, "Password must be at least 6 characters.")
+  .max(128, "Password must be at most 128 characters.");
 
 export const kycSchema = z.object({
   pancard: z.string().max(45).optional(),
@@ -42,11 +39,11 @@ export const businessSchema = z.object({
 
 export const changePasswordSchema = z
   .object({
-    oldPassword: z.string().min(1, "Old password is required"),
+    oldPassword: z.string().min(1, "Current password is required."),
     newPassword: passwordRules,
-    confirmPassword: z.string().min(1, "Please re-enter new password"),
+    confirmPassword: z.string().min(1, "Please confirm your new password."),
   })
   .refine((v) => v.newPassword === v.confirmPassword, {
-    message: "New password and re-enter password must match",
+    message: "New password and confirmation do not match.",
     path: ["confirmPassword"],
   });

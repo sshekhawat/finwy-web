@@ -1,16 +1,15 @@
 import { Suspense } from "react";
+import { AuthPageShell } from "@/components/auth/auth-page-shell";
 import { VerifyOtpClient } from "./verify-otp-client";
 
 export default function VerifyOtpPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-[40vh] w-full max-w-md items-center justify-center font-sans text-sm text-muted-foreground">
-          Loading…
-        </div>
-      }
-    >
-      <VerifyOtpClient />
-    </Suspense>
+    <AuthPageShell>
+      <Suspense
+        fallback={<p className="py-6 text-center text-sm text-muted-foreground">Loading…</p>}
+      >
+        <VerifyOtpClient />
+      </Suspense>
+    </AuthPageShell>
   );
 }

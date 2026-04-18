@@ -11,13 +11,7 @@ import { apiFetch, isApiConfigured } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { AuthPageShell } from "@/components/auth/auth-page-shell";
 
 type Form = z.infer<typeof forgotPasswordSchema>;
 
@@ -50,29 +44,41 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader>
-        <CardTitle>Forgot password</CardTitle>
-        <CardDescription>
-          POST <code className="text-xs">/auth/forgot-password</code> on your API.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" {...form.register("email")} />
-          </div>
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "…" : "Send reset link"}
-          </Button>
-        </form>
-      </CardContent>
-      <CardContent className="pt-0">
-        <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground">
-          Back to sign in
+    <AuthPageShell>
+      <div className="space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-foreground">Forgot password</h1>
+        <p className="text-sm text-muted-foreground">
+          Enter the email you used to register. If an account exists, we’ll send reset instructions.
+        </p>
+      </div>
+
+      <form onSubmit={form.handleSubmit(onSubmit)} className="mt-8 space-y-5">
+        <div className="space-y-2">
+          <Label htmlFor="email" className="text-sm font-medium">
+            Email
+          </Label>
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            className="h-11 rounded-xl border-slate-200 bg-slate-50/80 dark:border-input dark:bg-background"
+            {...form.register("email")}
+          />
+        </div>
+        <Button
+          type="submit"
+          className="h-11 w-full rounded-xl bg-[#6C63FF] text-base font-semibold text-white shadow-md shadow-[#6C63FF]/25 hover:bg-[#5b54e6]"
+          disabled={loading}
+        >
+          {loading ? "Sending…" : "Send reset instructions"}
+        </Button>
+      </form>
+
+      <p className="mt-8 border-t border-slate-100 pt-6 text-center text-sm dark:border-border">
+        <Link href="/login" className="font-semibold text-[#6C63FF] hover:text-[#5b54e6] hover:underline">
+          ← Back to sign in
         </Link>
-      </CardContent>
-    </Card>
+      </p>
+    </AuthPageShell>
   );
 }

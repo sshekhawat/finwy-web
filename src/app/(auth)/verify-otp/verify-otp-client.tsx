@@ -11,6 +11,8 @@ import { readApiError, callResendEmailOtp } from "@/lib/auth-http";
 import { maskEmailForDisplay } from "@/lib/mask-email";
 import { useAuthStore } from "@/stores/auth-store";
 import { OtpUnderlineInput } from "@/components/auth/otp-underline-input";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export function VerifyOtpClient() {
   const router = useRouter();
@@ -114,14 +116,20 @@ export function VerifyOtpClient() {
 
   if (!emailValid) {
     return (
-      <div className="w-full max-w-md space-y-6 px-2 text-center font-sans">
-        <h1 className="text-lg font-semibold text-foreground">Verify your account</h1>
-        <p className="text-sm text-muted-foreground">
-          Open this page from the registration confirmation link, or register again with your email.
+      <div className="space-y-5 text-center">
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-foreground">
+          Verify your account
+        </h1>
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          This page needs a valid email in the link. Return to registration and complete the flow, or open the link from
+          your inbox again.
         </p>
         <Link
           href="/register"
-          className="inline-block text-sm font-semibold text-foreground underline-offset-4 hover:underline"
+          className={cn(
+            buttonVariants({ size: "lg" }),
+            "inline-flex h-11 w-full items-center justify-center rounded-xl border-0 bg-[#6C63FF] text-base font-semibold text-white shadow-md shadow-[#6C63FF]/25 hover:bg-[#5b54e6] sm:w-auto sm:px-8",
+          )}
         >
           Back to registration
         </Link>
@@ -130,14 +138,14 @@ export function VerifyOtpClient() {
   }
 
   return (
-    <div className="w-full max-w-md space-y-10 px-2 font-sans">
-      <div className="space-y-3 text-center">
-        <h1 className="text-balance text-lg font-semibold leading-snug text-foreground sm:text-xl">
-          Please enter the One-Time Password to verify your account
+    <div className="space-y-8">
+      <div className="space-y-2 text-center">
+        <h1 className="text-balance text-xl font-semibold tracking-tight text-slate-900 dark:text-foreground sm:text-2xl">
+          Enter your verification code
         </h1>
         <p className="text-pretty text-sm text-muted-foreground">
-          A One-Time Password has been sent to{" "}
-          <span className="font-medium text-foreground/90">{masked}</span>
+          We sent a 6-digit code to{" "}
+          <span className="font-medium text-foreground/90">{masked}</span>. Enter it below to activate your account.
         </p>
       </div>
 
@@ -150,30 +158,27 @@ export function VerifyOtpClient() {
       >
         <OtpUnderlineInput value={otp} onChange={setOtp} disabled={loading} autoFocus />
 
-        <button
+        <Button
           type="submit"
           disabled={loading || otp.replace(/\D/g, "").length !== 6}
-          className="h-12 w-full rounded-lg bg-[#E57373] text-base font-semibold text-white shadow-sm transition-colors hover:bg-[#EF5350] disabled:pointer-events-none disabled:opacity-50"
+          className="h-11 w-full rounded-xl bg-[#6C63FF] text-base font-semibold text-white shadow-md shadow-[#6C63FF]/25 hover:bg-[#5b54e6]"
         >
-          {loading ? "…" : "Validate"}
-        </button>
+          {loading ? "Verifying…" : "Verify & continue"}
+        </Button>
       </form>
 
-      <div className="space-y-3 text-center text-sm">
+      <div className="space-y-4 border-t border-slate-100 pt-6 text-center text-sm dark:border-border">
         <button
           type="button"
           disabled={loading}
           onClick={() => void resend()}
-          className="font-semibold text-foreground underline-offset-4 hover:underline disabled:opacity-50"
+          className="font-semibold text-[#6C63FF] underline-offset-4 hover:underline disabled:opacity-50"
         >
-          Resend One-Time Password
+          Resend code
         </button>
-        <p>
-          <Link
-            href="/register"
-            className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-          >
-            Entered a wrong email?
+        <p className="text-muted-foreground">
+          <Link href="/register" className="font-medium text-foreground/90 hover:text-[#6C63FF] hover:underline">
+            Wrong email? Register again
           </Link>
         </p>
       </div>

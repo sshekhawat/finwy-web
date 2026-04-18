@@ -14,14 +14,7 @@ import { useAuthStore } from "@/stores/auth-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { AuthPageShell } from "@/components/auth/auth-page-shell";
 import {
   Dialog,
   DialogContent,
@@ -196,46 +189,61 @@ function LoginForm() {
 
   return (
     <>
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Sign in</CardTitle>
-          <CardDescription>
-            Uses <code className="text-xs">POST /auth/login</code>. If your email is not verified yet, you will be
-            asked for the OTP from your inbox, then <code className="text-xs">POST /auth/verify-email-otp</code>.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" autoComplete="email" {...form.register("email")} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                {...form.register("password")}
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Signing in…" : "Sign in"}
-            </Button>
-          </form>
-        </CardContent>
-        <CardFooter className="flex flex-col gap-2 text-sm text-muted-foreground">
-          <Link href="/forgot-password" className="hover:text-foreground">
+      <AuthPageShell>
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-foreground">Welcome back</h1>
+          <p className="text-sm text-muted-foreground">
+            Sign in with your email and password. If your email isn’t verified yet, we’ll help you enter the code we
+            sent.
+          </p>
+        </div>
+
+        <form onSubmit={form.handleSubmit(onSubmit)} className="mt-8 space-y-5">
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-sm font-medium">
+              Email
+            </Label>
+            <Input
+              id="email"
+              type="email"
+              autoComplete="email"
+              className="h-11 rounded-xl border-slate-200 bg-slate-50/80 dark:border-input dark:bg-background"
+              {...form.register("email")}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password" className="text-sm font-medium">
+              Password
+            </Label>
+            <Input
+              id="password"
+              type="password"
+              autoComplete="current-password"
+              className="h-11 rounded-xl border-slate-200 bg-slate-50/80 dark:border-input dark:bg-background"
+              {...form.register("password")}
+            />
+          </div>
+          <Button
+            type="submit"
+            className="h-11 w-full rounded-xl bg-[#6C63FF] text-base font-semibold text-white shadow-md shadow-[#6C63FF]/25 hover:bg-[#5b54e6]"
+            disabled={loading}
+          >
+            {loading ? "Signing in…" : "Sign in"}
+          </Button>
+        </form>
+
+        <div className="mt-6 flex flex-col gap-3 border-t border-slate-100 pt-6 text-sm dark:border-border">
+          <Link href="/forgot-password" className="font-medium text-[#6C63FF] hover:text-[#5b54e6] hover:underline">
             Forgot password?
           </Link>
-          <span>
-            No account?{" "}
-            <Link href="/register" className="text-primary hover:underline">
-              Register
+          <p className="text-muted-foreground">
+            New to Finwy?{" "}
+            <Link href="/register" className="font-semibold text-[#6C63FF] hover:text-[#5b54e6] hover:underline">
+              Create an account
             </Link>
-          </span>
-        </CardFooter>
-      </Card>
+          </p>
+        </div>
+      </AuthPageShell>
 
       <Dialog open={otpOpen} onOpenChange={setOtpOpen}>
         <DialogContent showCloseButton className="sm:max-w-md">
@@ -266,7 +274,11 @@ function LoginForm() {
               <Button type="button" variant="outline" onClick={resendOtp} disabled={loading}>
                 Resend code
               </Button>
-              <Button type="submit" disabled={loading}>
+              <Button
+                type="submit"
+                disabled={loading}
+                className="bg-[#6C63FF] text-white hover:bg-[#5b54e6]"
+              >
                 {loading ? "…" : "Verify & continue"}
               </Button>
             </DialogFooter>
@@ -279,7 +291,13 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<p className="text-sm text-muted-foreground">Loading…</p>}>
+    <Suspense
+      fallback={
+        <AuthPageShell>
+          <p className="py-8 text-center text-sm text-muted-foreground">Loading…</p>
+        </AuthPageShell>
+      }
+    >
       <LoginForm />
     </Suspense>
   );

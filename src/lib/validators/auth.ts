@@ -1,45 +1,42 @@
 import { z } from "zod";
 
-/** Align with backend `passwordRules` (min 12 + upper, lower, digit). */
+/** Align with backend `passwordRules`. */
 const passwordRules = z
   .string()
-  .min(12)
-  .max(128)
-  .regex(/[A-Z]/, "Must contain uppercase")
-  .regex(/[a-z]/, "Must contain lowercase")
-  .regex(/[0-9]/, "Must contain digit");
+  .min(6, "Password must be at least 6 characters.")
+  .max(128, "Password must be at most 128 characters.");
 
 export const registerSchema = z.object({
-  firstName: z.string().min(1).max(50),
-  lastName: z.string().min(1).max(50),
-  phone: z.string().min(8).max(20),
-  email: z.string().email().max(255),
+  firstName: z.string().min(1, "First name is required.").max(50, "First name is too long."),
+  lastName: z.string().min(1, "Last name is required.").max(50, "Last name is too long."),
+  phone: z.string().min(8, "Enter a valid phone number (at least 8 digits).").max(20, "Phone number is too long."),
+  email: z.string().email("Enter a valid email address.").max(255, "Email is too long."),
   password: passwordRules,
   referralId: z.string().optional(),
-  childSide: z.enum(["L", "R"]),
+  childSide: z.enum(["L", "R"], { message: "Choose left or right placement." }),
 });
 
 export const verifyEmailOtpSchema = z.object({
-  email: z.string().email(),
-  otp: z.string().regex(/^\d{6}$/, "Enter the 6-digit code"),
+  email: z.string().email("Enter a valid email address."),
+  otp: z.string().regex(/^\d{6}$/, "Enter the 6-digit code from your email."),
 });
 
 /** @deprecated Use verifyEmailOtpSchema — kept for Next.js mock routes that expect `code`. */
 export const verifyOtpSchema = z.object({
-  email: z.string().email(),
-  code: z.string().regex(/^\d{6}$/),
+  email: z.string().email("Enter a valid email address."),
+  code: z.string().regex(/^\d{6}$/, "Enter the 6-digit code from your email."),
 });
 
 export const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
+  email: z.string().email("Enter a valid email address."),
+  password: z.string().min(1, "Password is required."),
 });
 
 export const forgotPasswordSchema = z.object({
-  email: z.string().email(),
+  email: z.string().email("Enter a valid email address."),
 });
 
 export const resetPasswordSchema = z.object({
-  token: z.string().min(10),
+  token: z.string().min(10, "Reset link is invalid or expired. Request a new one."),
   password: passwordRules,
 });

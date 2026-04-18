@@ -128,7 +128,7 @@ export function SiteHeader() {
                 <Link
                   className={cn(
                     buttonVariants({ size: "default" }),
-                    "hidden whitespace-nowrap bg-[#1e4fd6] px-5 text-sm hover:bg-[#1a45c0] sm:inline-flex",
+                    "hidden whitespace-nowrap bg-[#6C63FF] px-5 text-sm hover:bg-[#5b54e6] sm:inline-flex",
                   )}
                   href="/dashboard"
                 >
@@ -155,7 +155,7 @@ export function SiteHeader() {
                 <Link
                   className={cn(
                     buttonVariants({ size: "default" }),
-                    "hidden whitespace-nowrap bg-[#1e4fd6] px-5 text-sm hover:bg-[#1a45c0] sm:inline-flex",
+                    "hidden whitespace-nowrap bg-[#6C63FF] px-5 text-sm hover:bg-[#5b54e6] sm:inline-flex",
                   )}
                   href="/login"
                 >
