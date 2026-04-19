@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch, getStoredAccessToken, isApiConfigured } from "@/lib/api-client";
+import { parseBackendAuthUser } from "@/lib/auth-user";
 import { useAuthStore } from "@/stores/auth-store";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 
@@ -31,23 +32,14 @@ export function DashboardAuthLayout({
       }
       try {
         const res = await apiFetch("/auth/me");
-        const json = (await res.json().catch(() => ({}))) as {
-          error?: string;
-          id?: string;
-          email?: string;
-          name?: string | null;
-          role?: string;
-        };
-        if (!res.ok) throw new Error(json.error ?? "Unauthorized");
-        if (json.id && json.email && json.role) {
-          setUser({
-            id: json.id,
-            email: json.email,
-            name: json.name ?? null,
-            role: json.role,
-          });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const err = json as { error?: { message?: string } };
+          throw new Error(err.error?.message ?? "Unauthorized");
         }
-        if (requireAdmin && json.role !== "ADMIN") {
+        const me = parseBackendAuthUser(json);
+        if (me) setUser(me);
+        if (requireAdmin && me?.role !== "ADMIN") {
           window.location.href = "/dashboard";
           return;
         }

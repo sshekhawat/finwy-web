@@ -7,6 +7,7 @@ import { BadgeIndianRupee, Building, ChartNoAxesColumn, FileCheck2, LayoutDashbo
 import { cn } from "@/lib/utils";
 import { logoutSession } from "@/lib/api-client";
 import { useAuthStore } from "@/stores/auth-store";
+import { KycPendingBanner } from "@/components/dashboard/kyc-pending-banner";
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
 import { DashboardHeader } from "@/components/dashboard/header";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -56,6 +57,7 @@ export function DashboardShell({
       />
       <main className="flex-1 px-4 pb-24 pt-4 lg:px-6 lg:pb-6">
         <DashboardHeader onOpenMobileMenu={() => setMobileMenuOpen(true)} />
+        <KycPendingBanner />
         <div className="mt-4">{children}</div>
       </main>
 

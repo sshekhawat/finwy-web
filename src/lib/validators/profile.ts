@@ -10,6 +10,22 @@ export const kycSchema = z.object({
   aadhaar: z.string().max(12).optional(),
 });
 
+/** Full KYC submission with document uploads (numbers only; files validated in UI). */
+export const kycSubmitFormSchema = z.object({
+  pancard: z
+    .string()
+    .transform((s) => s.replace(/[\s-]/g, "").toUpperCase())
+    .pipe(
+      z
+        .string()
+        .regex(/^[A-Z]{5}[0-9]{4}[A-Z]$/, "Enter a valid PAN (e.g. BQYPS0756F)."),
+    ),
+  aadhaar: z
+    .string()
+    .transform((s) => s.replace(/\D/g, ""))
+    .pipe(z.string().regex(/^\d{12}$/, "Aadhaar must be exactly 12 digits.")),
+});
+
 export const bankSchema = z.object({
   bankAc: z.string().max(45).optional(),
   bankAcName: z.string().max(45).optional(),
