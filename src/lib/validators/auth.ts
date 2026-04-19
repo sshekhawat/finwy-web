@@ -36,7 +36,14 @@ export const forgotPasswordSchema = z.object({
   email: z.string().email("Enter a valid email address."),
 });
 
+/** Matches backend `verifyForgotPasswordOtpSchema` — email + 6-digit OTP. */
+export const verifyForgotPasswordOtpSchema = z.object({
+  email: z.string().email("Enter a valid email address."),
+  otp: z.string().regex(/^\d{6}$/, "Enter the 6-digit code from your email."),
+});
+
+/** Matches backend `resetPasswordSchema` (`resetToken` + `newPassword`). */
 export const resetPasswordSchema = z.object({
-  token: z.string().min(10, "Reset link is invalid or expired. Request a new one."),
-  password: passwordRules,
+  resetToken: z.string().min(20, "Reset link is invalid or expired. Request a new one."),
+  newPassword: passwordRules,
 });

@@ -10,6 +10,7 @@ import { loginSchema, verifyEmailOtpSchema } from "@/lib/validators/auth";
 import type { z } from "zod";
 import { apiFetch, establishBrowserSession, isApiConfigured, setStoredAccessToken } from "@/lib/api-client";
 import { readApiError, callResendEmailOtp } from "@/lib/auth-http";
+import type { AuthUser } from "@/stores/auth-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,7 +30,8 @@ type LoginForm = z.infer<typeof loginSchema>;
 type LoginUser = {
   id: string;
   uuid?: string;
-  userCode?: string;
+  userId?: string | null;
+  username?: string | null;
   firstName?: string;
   lastName?: string;
   email: string;
@@ -37,13 +39,15 @@ type LoginUser = {
   name?: string | null;
 };
 
-function mapLoginUser(u: LoginUser): { id: string; email: string; name: string | null; role: string } {
+function mapLoginUser(u: LoginUser): AuthUser {
   const fromParts = [u.firstName, u.lastName]
     .filter((x): x is string => Boolean(x?.trim()))
     .join(" ")
     .trim();
   const name = u.name ?? (fromParts.length > 0 ? fromParts : null);
-  return { id: u.id, email: u.email, name, role: u.role };
+  const username = u.username?.trim() || null;
+  const publicUserId = u.userId?.trim() || null;
+  return { id: u.id, email: u.email, name, username, publicUserId, role: u.role };
 }
 
 function isEmailNotVerifiedMessage(msg: string): boolean {

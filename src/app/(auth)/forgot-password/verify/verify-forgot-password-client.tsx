@@ -5,20 +5,17 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { z } from "zod";
-import { verifyEmailOtpSchema } from "@/lib/validators/auth";
-import { apiFetch, establishBrowserSession, isApiConfigured, setStoredAccessToken } from "@/lib/api-client";
-import { readApiError, callResendEmailOtp } from "@/lib/auth-http";
+import { verifyForgotPasswordOtpSchema } from "@/lib/validators/auth";
+import { apiFetch, isApiConfigured } from "@/lib/api-client";
+import { readApiError } from "@/lib/auth-http";
 import { maskEmailForDisplay } from "@/lib/mask-email";
-import { parseBackendAuthUser } from "@/lib/auth-user";
-import { useAuthStore } from "@/stores/auth-store";
 import { OtpUnderlineInput } from "@/components/auth/otp-underline-input";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-export function VerifyOtpClient() {
+export function VerifyForgotPasswordClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const setUser = useAuthStore((s) => s.setUser);
 
   const emailRaw = searchParams.get("email")?.trim() ?? "";
   const email = emailRaw.toLowerCase();
@@ -35,10 +32,10 @@ export function VerifyOtpClient() {
       return;
     }
     if (!emailValid) {
-      toast.error("Invalid or missing email. Go back to registration.");
+      toast.error("Invalid or missing email. Start again from forgot password.");
       return;
     }
-    const parsed = verifyEmailOtpSchema.safeParse({ email, otp });
+    const parsed = verifyForgotPasswordOtpSchema.safeParse({ email, otp });
     if (!parsed.success) {
       const msg = parsed.error.flatten().fieldErrors.otp?.[0] ?? "Enter the 6-digit code";
       toast.error(msg);
@@ -47,7 +44,7 @@ export function VerifyOtpClient() {
 
     setLoading(true);
     try {
-      const res = await apiFetch("/auth/verify-email-otp", {
+      const res = await apiFetch("/auth/verify-forgot-password-otp", {
         method: "POST",
         body: JSON.stringify({
           email: parsed.data.email,
@@ -58,50 +55,35 @@ export function VerifyOtpClient() {
       if (!res.ok) {
         throw new Error(readApiError(json, "Verification failed"));
       }
-      const payload = json as {
-        success?: boolean;
-        data?: {
-          accessToken?: string;
-          refreshToken?: string;
-          user?: {
-            id: string;
-            email: string;
-            firstName: string;
-            lastName: string;
-            role: string;
-          };
-        };
-      };
-      if (payload.data?.accessToken) setStoredAccessToken(payload.data.accessToken);
-      await establishBrowserSession(payload.data?.refreshToken);
-      if (payload.data?.user) {
-        const parsed = parseBackendAuthUser({ success: true, data: payload.data.user });
-        if (parsed) setUser(parsed);
+      const payload = json as { success?: boolean; data?: { resetToken?: string } };
+      const resetToken = payload.data?.resetToken;
+      if (!resetToken) {
+        throw new Error("Missing reset token from server");
       }
-      toast.success("Email verified. You are signed in.");
-      router.push("/dashboard");
+      toast.success("Code verified. Choose a new password.");
+      router.push(`/reset-password?token=${encodeURIComponent(resetToken)}`);
       router.refresh();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Verification failed");
     } finally {
       setLoading(false);
     }
-  }, [email, emailValid, otp, router, setUser]);
+  }, [email, emailValid, otp, router]);
 
   async function resend() {
     if (!emailValid) return;
     setLoading(true);
     try {
-      const out = await callResendEmailOtp(email);
-      if (!out.ok) {
-        toast.error(out.message);
-        return;
+      const res = await apiFetch("/auth/forgot-password", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(readApiError(json, "Could not resend code"));
       }
-      if (out.emailDispatched === false) {
-        toast.warning("OTP was updated, but email was not sent (configure SMTP on the API server).");
-      } else {
-        toast.success(out.message);
-      }
+      const payload = json as { data?: { message?: string } };
+      toast.success(payload.data?.message ?? "If the account exists, a new code was sent.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not resend");
     } finally {
@@ -113,20 +95,19 @@ export function VerifyOtpClient() {
     return (
       <div className="space-y-5 text-center">
         <h1 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-foreground">
-          Verify your account
+          Reset password
         </h1>
         <p className="text-sm leading-relaxed text-muted-foreground">
-          This page needs a valid email in the link. Return to registration and complete the flow, or open the link from
-          your inbox again.
+          This step needs your email in the link. Go back and request a reset code again.
         </p>
         <Link
-          href="/register"
+          href="/forgot-password"
           className={cn(
             buttonVariants({ size: "lg" }),
             "inline-flex h-11 w-full items-center justify-center rounded-xl border-0 bg-[#6C63FF] text-base font-semibold text-white shadow-md shadow-[#6C63FF]/25 hover:bg-[#5b54e6] sm:w-auto sm:px-8",
           )}
         >
-          Back to registration
+          Forgot password
         </Link>
       </div>
     );
@@ -136,11 +117,11 @@ export function VerifyOtpClient() {
     <div className="space-y-8">
       <div className="space-y-2 text-center">
         <h1 className="text-balance text-xl font-semibold tracking-tight text-slate-900 dark:text-foreground sm:text-2xl">
-          Enter your verification code
+          Enter reset code
         </h1>
         <p className="text-pretty text-sm text-muted-foreground">
           We sent a 6-digit code to{" "}
-          <span className="font-medium text-foreground/90">{masked}</span>. Enter it below to activate your account.
+          <span className="font-medium text-foreground/90">{masked}</span>. Enter it below to set a new password.
         </p>
       </div>
 
@@ -172,8 +153,8 @@ export function VerifyOtpClient() {
           Resend code
         </button>
         <p className="text-muted-foreground">
-          <Link href="/register" className="font-medium text-foreground/90 hover:text-[#6C63FF] hover:underline">
-            Wrong email? Register again
+          <Link href="/forgot-password" className="font-medium text-foreground/90 hover:text-[#6C63FF] hover:underline">
+            Wrong email? Start over
           </Link>
         </p>
       </div>

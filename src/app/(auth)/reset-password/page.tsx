@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { resetPasswordSchema } from "@/lib/validators/auth";
 import type { z } from "zod";
 import { apiFetch, isApiConfigured } from "@/lib/api-client";
+import { readApiError } from "@/lib/auth-http";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,11 +24,11 @@ function ResetForm() {
 
   const form = useForm<Form>({
     resolver: zodResolver(resetPasswordSchema),
-    defaultValues: { token, password: "" },
+    defaultValues: { resetToken: token, newPassword: "" },
   });
 
   useEffect(() => {
-    if (token) form.setValue("token", token);
+    if (token) form.setValue("resetToken", token);
   }, [token, form]);
 
   async function onSubmit(data: Form) {
@@ -39,11 +40,15 @@ function ResetForm() {
     try {
       const res = await apiFetch("/auth/reset-password", {
         method: "POST",
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          resetToken: data.resetToken,
+          newPassword: data.newPassword,
+        }),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error ?? "Failed");
-      toast.success(json.message ?? "Password updated");
+      if (!res.ok) throw new Error(readApiError(json, "Failed to reset password"));
+      const payload = json as { data?: { message?: string } };
+      toast.success(payload.data?.message ?? "Password updated");
       window.location.href = "/login";
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed");
@@ -72,17 +77,17 @@ function ResetForm() {
       ) : null}
 
       <form onSubmit={form.handleSubmit(onSubmit)} className="mt-8 space-y-5">
-        <input type="hidden" {...form.register("token")} />
+        <input type="hidden" {...form.register("resetToken")} />
         <div className="space-y-2">
-          <Label htmlFor="password" className="text-sm font-medium">
+          <Label htmlFor="newPassword" className="text-sm font-medium">
             New password
           </Label>
           <Input
-            id="password"
+            id="newPassword"
             type="password"
             autoComplete="new-password"
             className="h-11 rounded-xl border-slate-200 bg-slate-50/80 dark:border-input dark:bg-background"
-            {...form.register("password")}
+            {...form.register("newPassword")}
           />
           <p className="text-xs text-muted-foreground">Use at least 6 characters.</p>
         </div>

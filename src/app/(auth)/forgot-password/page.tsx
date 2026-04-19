@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { forgotPasswordSchema } from "@/lib/validators/auth";
 import type { z } from "zod";
 import { apiFetch, isApiConfigured } from "@/lib/api-client";
+import { readApiError } from "@/lib/auth-http";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +18,7 @@ import { AuthPageShell } from "@/components/auth/auth-page-shell";
 type Form = z.infer<typeof forgotPasswordSchema>;
 
 export default function ForgotPasswordPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const form = useForm<Form>({
     resolver: zodResolver(forgotPasswordSchema),
@@ -33,9 +36,11 @@ export default function ForgotPasswordPage() {
         method: "POST",
         body: JSON.stringify(data),
       });
-      const json = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
-      if (!res.ok) throw new Error(json.error ?? "Failed");
-      toast.success(json.message ?? "If an account exists, instructions were sent.");
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(readApiError(json, "Failed to send reset code"));
+      const payload = json as { data?: { message?: string } };
+      toast.success(payload.data?.message ?? "If an account exists, a reset code was sent.");
+      router.push(`/forgot-password/verify?email=${encodeURIComponent(data.email.trim().toLowerCase())}`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed");
     } finally {

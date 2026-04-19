@@ -198,17 +198,17 @@ export function requestPasswordReset(input: { email: string }): { message: strin
   };
 }
 
-export function resetPassword(input: { token: string; password: string }): { message: string } {
+export function resetPassword(input: { resetToken: string; newPassword: string }): { message: string } {
   prune();
-  const reset = resetTokens.get(input.token);
+  const reset = resetTokens.get(input.resetToken);
   if (!reset || reset.expiresAt <= now()) {
-    resetTokens.delete(input.token);
+    resetTokens.delete(input.resetToken);
     throw new Error("Reset token is invalid or expired");
   }
   const user = usersById.get(reset.userId);
   if (!user) throw new Error("User not found for reset token");
 
-  user.passwordHash = hashPassword(input.password);
-  resetTokens.delete(input.token);
+  user.passwordHash = hashPassword(input.newPassword);
+  resetTokens.delete(input.resetToken);
   return { message: "Password updated successfully" };
 }

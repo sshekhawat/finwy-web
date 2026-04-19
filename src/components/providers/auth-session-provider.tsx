@@ -14,8 +14,11 @@ import {
   isApiConfigured,
   setStoredAccessToken,
 } from "@/lib/api-client";
+import { minimalAuthUserFromJwt, parseBackendAuthUser } from "@/lib/auth-user";
 import { decodeJwtPayload } from "@/lib/jwt-payload";
 import { useAuthStore } from "@/stores/auth-store";
+
+const getAuthUser = () => useAuthStore.getState().user;
 
 type AuthSessionValue = {
   /** Session bootstrap finished (me / refresh attempt done when API is configured). */
@@ -31,36 +34,6 @@ const AuthSessionContext = createContext<AuthSessionValue>({
 
 export function useAuthSession() {
   return useContext(AuthSessionContext);
-}
-
-function parseMe(json: unknown): { id: string; email: string; name: string | null; role: string } | null {
-  if (!json || typeof json !== "object") return null;
-  if ("success" in json && (json as { success?: boolean }).success && "data" in json) {
-    const d = (json as { data: unknown }).data;
-    if (d && typeof d === "object") {
-      const o = d as Record<string, unknown>;
-      const id = String(o.id ?? o.uuid ?? "");
-      const email = String(o.email ?? "");
-      const role = String(o.role ?? "USER");
-      if (id && email) {
-        const first = o.firstName as string | undefined;
-        const last = o.lastName as string | undefined;
-        const nameFromParts = [first, last].filter(Boolean).join(" ").trim();
-        const name = (o.name as string | null | undefined) ?? (nameFromParts || null);
-        return { id, email, name, role };
-      }
-    }
-  }
-  const o = json as Record<string, unknown>;
-  if (o.id && o.email && o.role) {
-    return {
-      id: String(o.id),
-      email: String(o.email),
-      name: (o.name as string | null) ?? null,
-      role: String(o.role),
-    };
-  }
-  return null;
 }
 
 export function AuthSessionProvider({ children }: { children: React.ReactNode }) {
@@ -107,24 +80,29 @@ export function AuthSessionProvider({ children }: { children: React.ReactNode })
         const res = await apiFetch("/auth/me");
         const json = await res.json().catch(() => ({}));
         if (res.ok) {
-          const me = parseMe(json);
-          if (me) setUser(me);
-          else {
-            const p = decodeJwtPayload(token);
-            if (p?.sub && p.email) {
-              setUser({ id: p.sub, email: p.email, name: null, role: p.role ?? "USER" });
+          const me = parseBackendAuthUser(json);
+          if (me) {
+            setUser(me);
+          } else {
+            // Do not replace a richer user from login with JWT-only fields (name / username / userId missing).
+            const existing = getAuthUser();
+            if (!existing) {
+              const p = decodeJwtPayload(token);
+              if (p?.sub && p.email) {
+                setUser(minimalAuthUserFromJwt({ sub: p.sub, email: p.email, role: p.role }));
+              }
             }
           }
         } else {
           const p = decodeJwtPayload(token);
           if (p?.sub && p.email) {
-            setUser({ id: p.sub, email: p.email, name: null, role: p.role ?? "USER" });
+            setUser(minimalAuthUserFromJwt({ sub: p.sub, email: p.email, role: p.role }));
           }
         }
       } catch {
         const p = decodeJwtPayload(token);
         if (p?.sub && p.email) {
-          setUser({ id: p.sub, email: p.email, name: null, role: p.role ?? "USER" });
+          setUser(minimalAuthUserFromJwt({ sub: p.sub, email: p.email, role: p.role }));
         }
       }
 
