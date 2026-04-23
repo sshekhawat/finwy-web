@@ -4,9 +4,11 @@ export type AuthUser = {
   id: string;
   email: string;
   name: string | null;
+  firstName: string | null;
+  lastName: string | null;
   /** App username (`users.username`), if set. */
   username: string | null;
-  /** Public referral id (`users.userId`, e.g. FIN…). */
+  /** Public referral id (`users.userId`, e.g. FWY…). */
   publicUserId: string | null;
   role: string;
 };

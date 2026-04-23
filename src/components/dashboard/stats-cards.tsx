@@ -1,57 +1,49 @@
-import { ArrowDownRight, ArrowUpRight, DollarSign, TrendingDown, TrendingUp } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Coins,
+  FileCheck2,
+  Gift,
+  SunMedium,
+  UserPlus,
+  Wallet,
+} from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-const cards = [
-  {
-    title: "Income",
-    value: "$12,000",
-    change: "+2.36%",
-    positive: true,
-    icon: TrendingUp,
-  },
-  {
-    title: "Outcome",
-    value: "$12,000",
-    change: "-2.36%",
-    positive: false,
-    icon: TrendingDown,
-  },
-  {
-    title: "Revenue",
-    value: "$4,000",
-    change: "+2.36%",
-    positive: true,
-    icon: DollarSign,
-  },
-];
+const shortcuts = [
+  { title: "Reward", icon: Gift },
+  { title: "Digital Gold", icon: Coins },
+  { title: "Daily Earn", icon: SunMedium },
+  { title: "D-Coin", icon: Wallet },
+  { title: "Nodues Credit", icon: FileCheck2 },
+  { title: "My Referral", icon: UserPlus },
+] as const;
 
 export function StatsCards() {
   return (
-    <div className="grid gap-4 md:grid-cols-3">
-      {cards.map((item) => {
-        const Icon = item.icon;
-        return (
-          <Card key={item.title} className="border border-slate-200 bg-white shadow-sm">
-            <CardContent className="flex items-center justify-between p-4">
-              <div>
-                <p className="text-sm text-slate-500">{item.title}</p>
-                <p className="mt-1 text-2xl font-semibold text-slate-900">{item.value}</p>
-                <p
-                  className={`mt-1 inline-flex items-center text-xs font-medium ${
-                    item.positive ? "text-emerald-600" : "text-rose-600"
-                  }`}
-                >
-                  {item.positive ? <ArrowUpRight className="mr-1 size-3" /> : <ArrowDownRight className="mr-1 size-3" />}
-                  {item.change}
-                </p>
-              </div>
-              <div className="rounded-xl bg-[#6C63FF]/10 p-3 text-[#6C63FF]">
-                <Icon className="size-5" />
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
-    </div>
+    <Card className="border border-slate-200 bg-white shadow-sm">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">Explore Finwy</CardTitle>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <div className="grid grid-cols-3 gap-4 sm:grid-cols-3 md:grid-cols-6">
+          {shortcuts.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.title}
+                type="button"
+                className="flex flex-col items-center gap-2 rounded-xl p-2 text-center transition hover:bg-slate-50"
+              >
+                <span className="grid size-14 place-items-center rounded-full bg-slate-100 text-[#6C63FF] ring-1 ring-slate-200/80">
+                  <Icon className="size-6" strokeWidth={1.75} />
+                </span>
+                <span className="text-[11px] font-medium leading-tight text-slate-700 sm:text-xs">
+                  {item.title}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

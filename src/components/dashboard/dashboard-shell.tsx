@@ -64,8 +64,7 @@ export function DashboardShell({
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
         <SheetContent side="left" className="w-[85%] max-w-sm bg-white p-0">
           <SheetHeader className="border-b border-slate-200">
-            <SheetTitle>Finwy Panel</SheetTitle>
-            <SheetDescription>Navigate your dashboard sections</SheetDescription>
+            <SheetTitle>Finwy</SheetTitle>            
           </SheetHeader>
           <div className="space-y-1 p-4">
             <Link
@@ -153,7 +152,7 @@ export function DashboardShell({
         </SheetContent>
       </Sheet>
 
-      <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-2 border-t border-slate-200 bg-white/95 px-2 py-2 backdrop-blur lg:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-3 border-t border-slate-200 bg-white/95 px-2 py-2 backdrop-blur lg:hidden">
         <a
           href="/dashboard"
           className={cn(
@@ -163,6 +162,18 @@ export function DashboardShell({
         >
           <LayoutDashboard className="size-5" />
           Dashboard
+        </a>
+        <a
+          href="/dashboard/income"
+          className={cn(
+            "flex flex-col items-center gap-1 rounded-md py-1 text-xs",
+            pathname.startsWith("/dashboard/income")
+              ? "text-[#6C63FF]"
+              : "text-slate-500",
+          )}
+        >
+          <BadgeIndianRupee className="size-5" />
+          Loan
         </a>
         <a
           href="/dashboard/profile"

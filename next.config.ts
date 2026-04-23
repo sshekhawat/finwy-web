@@ -18,6 +18,7 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: projectRoot,
   },
+  /** Required for Route Handlers (`src/app/api/**`) and SSR. Use `standalone` output for Docker/PM2 deploys — not `export`. */
   output: "standalone",
   images: {
     remotePatterns: [

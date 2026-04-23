@@ -1,14 +1,8 @@
 "use client";
 
-import { ArrowUpRight, Plus, Send, Wallet } from "lucide-react";
+import { Plus, Send, Wallet } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProfileCreditCard } from "@/components/dashboard/profile-credit-card";
-
-const linkedAccounts = [
-  { initials: "HS", color: "bg-sky-100 text-sky-700" },
-  { initials: "AJ", color: "bg-emerald-100 text-emerald-700" },
-  { initials: "RK", color: "bg-violet-100 text-violet-700" },
-];
 
 export function RightPanelRest() {
   return (
@@ -18,11 +12,7 @@ export function RightPanelRest() {
           <CardTitle className="text-base">Wallet Balance</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-3xl font-semibold text-slate-900">$25,360</p>
-          <p className="mt-1 inline-flex items-center text-xs font-medium text-emerald-600">
-            <ArrowUpRight className="mr-1 size-3" />
-            +16%
-          </p>
+          <p className="text-3xl font-semibold tabular-nums text-slate-900">₹0</p>
         </CardContent>
       </Card>
 
@@ -48,24 +38,6 @@ export function RightPanelRest() {
               </button>
             );
           })}
-        </CardContent>
-      </Card>
-
-      <Card className="border border-slate-200 bg-white shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-base">Linked Accounts</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center">
-            {linkedAccounts.map((acc, index) => (
-              <div
-                key={acc.initials}
-                className={`-ml-2 grid size-9 place-items-center rounded-full border-2 border-white text-xs font-semibold ${acc.color} ${index === 0 ? "ml-0" : ""}`}
-              >
-                {acc.initials}
-              </div>
-            ))}
-          </div>
         </CardContent>
       </Card>
 

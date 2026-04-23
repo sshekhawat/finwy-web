@@ -45,9 +45,20 @@ function mapLoginUser(u: LoginUser): AuthUser {
     .join(" ")
     .trim();
   const name = u.name ?? (fromParts.length > 0 ? fromParts : null);
+  const firstName = u.firstName?.trim() || null;
+  const lastName = u.lastName?.trim() || null;
   const username = u.username?.trim() || null;
   const publicUserId = u.userId?.trim() || null;
-  return { id: u.id, email: u.email, name, username, publicUserId, role: u.role };
+  return {
+    id: u.id,
+    email: u.email,
+    name,
+    firstName,
+    lastName,
+    username,
+    publicUserId,
+    role: u.role,
+  };
 }
 
 function isEmailNotVerifiedMessage(msg: string): boolean {

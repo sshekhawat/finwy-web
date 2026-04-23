@@ -1,10 +1,45 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronRight, Info, Pencil } from "lucide-react";
-import { displayHandle, initialsFromUser } from "@/lib/auth-user";
+import { apiFetch, getStoredAccessToken } from "@/lib/api-client";
+import {
+  displayHandle,
+  initialsFromUser,
+} from "@/lib/auth-user";
 import { useAuthStore } from "@/stores/auth-store";
 import { Card, CardContent } from "@/components/ui/card";
+
+const inr = new Intl.NumberFormat("en-IN", {
+  style: "currency",
+  currency: "INR",
+  maximumFractionDigits: 2,
+});
+
+type CreditState = {
+  min: number;
+  max: number;
+  available: number;
+  loading: boolean;
+};
+
+function parseCreditSummary(json: unknown): Pick<CreditState, "min" | "max" | "available"> {
+  if (!json || typeof json !== "object") {
+    return { min: 1000, max: 50000, available: 0 };
+  }
+  const d = json as Record<string, unknown>;
+  const min = Number(d.totalCreditLimitMin ?? d.creditLimitMin ?? 1000);
+  const max = Number(d.totalCreditLimitMax ?? d.creditLimitMax ?? 50000);
+  const rawAvail = d.availableCreditLimit ?? d.availableCredit ?? 0;
+  const available =
+    typeof rawAvail === "string" ? Number.parseFloat(rawAvail) : Number(rawAvail);
+  return {
+    min: Number.isFinite(min) ? min : 1000,
+    max: Number.isFinite(max) ? max : 50000,
+    available: Number.isFinite(available) ? available : 0,
+  };
+}
 
 export function ProfileCreditCard() {
   const user = useAuthStore((s) => s.user);
@@ -12,6 +47,53 @@ export function ProfileCreditCard() {
   const handle = user ? displayHandle(user) : "@—";
   const email = user?.email ?? "";
   const initials = user ? initialsFromUser(user) : "—";
+
+  const [credit, setCredit] = useState<CreditState>({
+    min: 1000,
+    max: 50000,
+    available: 0,
+    loading: true,
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    const token = getStoredAccessToken();
+    if (!token) {
+      setCredit((c) => ({ ...c, loading: false }));
+      return;
+    }
+
+    (async () => {
+      try {
+        const res = await apiFetch("/dashboard/summary");
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error("summary failed");
+        const parsed = parseCreditSummary(json);
+        if (!cancelled) {
+          setCredit({ ...parsed, loading: false });
+        }
+      } catch {
+        if (!cancelled) {
+          setCredit((c) => ({
+            ...c,
+            min: 1000,
+            max: 50000,
+            available: 0,
+            loading: false,
+          }));
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const limitLabel = useMemo(
+    () => `₹${credit.min.toLocaleString("en-IN")} - ₹${credit.max.toLocaleString("en-IN")}`,
+    [credit.min, credit.max],
+  );
 
   return (
     <Card className="border border-slate-200 bg-white shadow-sm">
@@ -46,7 +128,9 @@ export function ProfileCreditCard() {
 
         <div className="mt-6 w-full rounded-2xl bg-[#f5f5f5] p-4 text-left">
           <p className="flex items-center gap-1.5 text-xs leading-snug text-[#757575]">
-            <span>Total Credit Limit: ₹1,000 - ₹50,000</span>
+            <span>
+              Total Credit Limit: {credit.loading ? "…" : limitLabel}
+            </span>
             <span
               className="inline-flex size-4 shrink-0 items-center justify-center rounded-full border border-[#bdbdbd] text-[#9e9e9e]"
               title="Credit limit range for your account"
@@ -57,7 +141,7 @@ export function ProfileCreditCard() {
           <p className="mt-3 text-xs text-[#757575]">
             Available Credit Limit:{" "}
             <span className="text-lg font-semibold tracking-tight text-[#FF8A65]">
-              ₹0.00
+              {credit.loading ? "…" : inr.format(credit.available)}
             </span>
           </p>
           <button
@@ -70,25 +154,18 @@ export function ProfileCreditCard() {
         </div>
 
         <div className="mt-3 w-full rounded-2xl bg-[#f5f5f5] p-4 text-left">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-xs font-medium text-[#757575]">Finwy Score</p>
-            <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700">
-              Good
-            </span>
-          </div>
+          <p className="text-xs font-medium text-[#757575]">Finwy Score</p>
           <div className="mt-3 flex items-end justify-between border-t border-slate-200/80 pt-3">
             <div>
-              <p className="text-[10px] uppercase tracking-wide text-[#9e9e9e]">
-                This month
-              </p>
-              <p className="mt-0.5 text-sm font-semibold text-slate-800">₹12,400</p>
+              <p className="text-[10px] uppercase tracking-wide text-[#9e9e9e]">This month</p>
+              <p className="mt-0.5 text-sm font-semibold tabular-nums text-slate-800">₹0</p>
             </div>
             <div className="text-right">
               <p className="flex items-center justify-end gap-0.5 text-[10px] text-[#9e9e9e]">
                 Cashback
                 <Info className="size-3 text-[#bdbdbd]" strokeWidth={2} />
               </p>
-              <p className="mt-0.5 text-sm font-semibold text-[#FF8A65]">₹240</p>
+              <p className="mt-0.5 text-sm font-semibold tabular-nums text-[#FF8A65]">₹0</p>
             </div>
           </div>
         </div>

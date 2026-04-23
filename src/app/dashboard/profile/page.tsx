@@ -24,7 +24,7 @@ export default function ProfilePage() {
                 <CardTitle>{item.title}</CardTitle>
                 <CardDescription>{item.desc}</CardDescription>
               </CardHeader>
-              <CardContent className="text-sm text-blue-700 dark:text-blue-400">Open section ?</CardContent>
+              <CardContent className="text-sm text-blue-700 dark:text-blue-400">Open section</CardContent>
             </Card>
           </Link>
         ))}

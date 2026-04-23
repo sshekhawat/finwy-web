@@ -43,6 +43,8 @@ export function parseBackendAuthUser(json: unknown): AuthUser | null {
 
   const first = typeof raw.firstName === "string" ? raw.firstName : "";
   const last = typeof raw.lastName === "string" ? raw.lastName : "";
+  const firstName = first.trim() ? first.trim() : null;
+  const lastName = last.trim() ? last.trim() : null;
   const nameFromParts = [first, last]
     .map((s) => s.trim())
     .filter(Boolean)
@@ -64,7 +66,7 @@ export function parseBackendAuthUser(json: unknown): AuthUser | null {
   const publicUserId =
     pid != null && String(pid).trim() ? String(pid).trim() : null;
 
-  return { id, email, name, username, publicUserId, role };
+  return { id, email, name, firstName, lastName, username, publicUserId, role };
 }
 
 export function minimalAuthUserFromJwt(p: {
@@ -76,10 +78,35 @@ export function minimalAuthUserFromJwt(p: {
     id: p.sub,
     email: p.email,
     name: null,
+    firstName: null,
+    lastName: null,
     username: null,
     publicUserId: null,
     role: p.role ?? "USER",
   };
+}
+
+/** Card line: first + last from `/auth/me`, else `name`, else email local-part. */
+export function cardHolderDisplayName(
+  u: Pick<AuthUser, "firstName" | "lastName" | "name" | "email">,
+): string {
+  const fromParts = [u.firstName?.trim(), u.lastName?.trim()]
+    .filter((s): s is string => Boolean(s))
+    .join(" ")
+    .trim();
+  const base =
+    fromParts ||
+    u.name?.trim() ||
+    u.email.split("@")[0]?.trim() ||
+    "User";
+  return base.toLocaleUpperCase("en-IN");
+}
+
+/** Last four digits of `userId` (digits only), for masked card PAN. */
+export function cardLastFourFromUserId(publicUserId: string | null | undefined): string {
+  const digits = (publicUserId ?? "").replace(/\D/g, "");
+  const tail = digits.slice(-4);
+  return tail.length >= 4 ? tail.slice(-4) : tail.padStart(4, "0");
 }
 
 /** @handle — prefers `username`, then email local-part, then public user id. */
@@ -94,7 +121,9 @@ export function displayHandle(u: Pick<AuthUser, "username" | "email" | "publicUs
   return "@user";
 }
 
-export function initialsFromUser(u: Pick<AuthUser, "name" | "email">): string {
+export function initialsFromUser(
+  u: Pick<AuthUser, "name" | "email" | "firstName" | "lastName">,
+): string {
   const name = u.name?.trim();
   if (name) {
     const parts = name.split(/\s+/).filter(Boolean);
@@ -103,5 +132,9 @@ export function initialsFromUser(u: Pick<AuthUser, "name" | "email">): string {
     }
     return name.slice(0, 2).toUpperCase();
   }
+  const fn = u.firstName?.trim();
+  const ln = u.lastName?.trim();
+  if (fn && ln) return (fn.slice(0, 1) + ln.slice(0, 1)).toUpperCase();
+  if (fn) return fn.slice(0, 2).toUpperCase();
   return u.email.slice(0, 2).toUpperCase();
 }

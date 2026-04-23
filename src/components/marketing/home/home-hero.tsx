@@ -36,6 +36,17 @@ export function HomeHero() {
             fees—built for teams that need bank-grade controls without the bank-grade
             complexity.
           </p>
+          <div className="mt-6 rounded-xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
+            <p className="text-base font-semibold leading-relaxed text-white md:text-lg">
+              अब लोन लेना हुआ आसान!
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-white/90 md:text-base">
+              टीम-बेस्ड लोन वॉलेट, तुरंत ट्रांसफर और 100% पारदर्शी फीस के साथ।
+            </p>
+            <p className="mt-1 text-sm leading-relaxed text-white/90 md:text-base">
+              पाएं बैंक जैसी सुविधा—बिना किसी झंझट के।
+            </p>
+          </div>
           <div className="mt-10 flex flex-wrap items-center gap-4">
             <Link
               href="/register"
