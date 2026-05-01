@@ -133,7 +133,6 @@ export default function BusinessDetailsPage() {
     <div className="max-w-3xl space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Business Details</h1>
-        <p className="text-sm text-muted-foreground">Maintain your business profile and registration data.</p>
       </div>
       <Card>
         <CardHeader>

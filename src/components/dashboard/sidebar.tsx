@@ -9,6 +9,7 @@ import {
   ChartNoAxesColumn,
   ChevronLeft,
   FileCheck2,
+  KeyRound,
   LayoutDashboard,
   LogOut,
   ShieldCheck,
@@ -29,6 +30,7 @@ const profileLinks = [
   { href: "/dashboard/profile/bank", label: "Bank", icon: Building },
   { href: "/dashboard/profile/business-details", label: "Business Details", icon: FileCheck2 },
   { href: "/dashboard/profile/personal-details", label: "Personal Details", icon: User },
+  { href: "/dashboard/profile/change-password", label: "Change password", icon: KeyRound },
 ];
 
 const communityLinks = [

@@ -142,7 +142,18 @@ export default function BankPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="bank-type">Account Type</Label>
-              <Input id="bank-type" placeholder="Savings / Current" {...form.register("bankType")} />
+              <select
+                id="bank-type"
+                className="h-9 w-full rounded-lg border border-input bg-transparent px-3 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                {...form.register("bankType")}
+              >
+                <option value="">Select account type</option>
+                <option value="Savings">Savings</option>
+                <option value="Current">Current</option>
+                <option value="Salary">Salary</option>
+                <option value="Business">Business</option>
+                <option value="Joint">Joint</option>
+              </select>
             </div>
             <div className="sm:col-span-2">
               <Button type="submit" disabled={loading || saving}>

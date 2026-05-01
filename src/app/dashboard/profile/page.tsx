@@ -6,6 +6,7 @@ const profileCards = [
   { href: "/dashboard/profile/bank", title: "Bank", desc: "Add and manage bank accounts." },
   { href: "/dashboard/profile/business-details", title: "Business Details", desc: "Company and GST information." },
   { href: "/dashboard/profile/personal-details", title: "Personal Details", desc: "Contact and identity details." },
+  { href: "/dashboard/profile/change-password", title: "Change password", desc: "Update your login password." },
 ];
 
 export default function ProfilePage() {
@@ -13,7 +14,7 @@ export default function ProfilePage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Profile</h1>
-        <p className="text-sm text-muted-foreground">Manage your KYC, bank, business, and personal details.</p>
+        <p className="text-sm text-muted-foreground">Manage your KYC, bank, business, personal details, and password.</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">

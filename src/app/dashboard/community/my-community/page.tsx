@@ -86,13 +86,12 @@ export default function MyCommunityPage() {
   const to = total === 0 ? 0 : Math.min(page * PAGE_SIZE, total);
 
   return (
-    <div className="space-y-6">
-      <div>
+    <div className="min-w-0 space-y-6">
+      <div className="min-w-0">
         <h1 className="text-2xl font-semibold tracking-tight">My Community</h1>
-        <p className="text-sm text-muted-foreground">Referral list of users registered under your ID.</p>
       </div>
 
-      <Card className="border-slate-200/80 shadow-sm dark:border-slate-800">
+      <Card className="min-w-0 border-slate-200/80 shadow-sm dark:border-slate-800">
         <CardHeader className="pb-3">
           <CardTitle>Referral Members</CardTitle>
           <CardDescription>
@@ -103,47 +102,88 @@ export default function MyCommunityPage() {
                 : "No referral members found yet."}
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-14">#</TableHead>
-                <TableHead>User ID</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Contact No</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Registration Date</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((member, index) => (
-                <TableRow key={`${member.userId}-${index}`}>
-                  <TableCell className="font-medium">{(page - 1) * PAGE_SIZE + index + 1}</TableCell>
-                  <TableCell className="font-medium text-primary">{member.userId}</TableCell>
-                  <TableCell>{member.name || "-"}</TableCell>
-                  <TableCell>{member.contactNo || "-"}</TableCell>
-                  <TableCell>{member.email}</TableCell>
-                  <TableCell>{toDateLabel(member.registrationDate)}</TableCell>
-                  <TableCell>
-                    <Badge variant={member.status === "ACTIVE" ? "default" : "secondary"}>
-                      {member.status}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
+        <CardContent className="min-w-0 space-y-4">
+          <div className="divide-y rounded-md border md:hidden">
+            {loading ? (
+              <div className="p-6 text-center text-sm text-muted-foreground">Loading…</div>
+            ) : items.length === 0 ? (
+              <div className="p-6 text-center text-sm text-muted-foreground">No records available for this page.</div>
+            ) : (
+              items.map((member, index) => (
+                <div key={`${member.userId}-${index}`} className="space-y-2 p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-xs font-medium text-muted-foreground">#{(page - 1) * PAGE_SIZE + index + 1}</p>
+                    <Badge variant={member.status === "ACTIVE" ? "default" : "secondary"}>{member.status}</Badge>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">User ID</p>
+                    <p className="font-mono text-sm font-semibold text-primary">{member.userId}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Name</p>
+                    <p className="text-sm break-words">{member.name || "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Contact</p>
+                    <p className="text-sm tabular-nums">{member.contactNo || "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Email</p>
+                    <p className="text-sm break-all">{member.email}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Registered</p>
+                    <p className="text-sm">{toDateLabel(member.registrationDate)}</p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
 
-              {!loading && items.length === 0 && (
+          <div className="hidden md:block">
+            <Table className="min-w-[720px]">
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={7} className="py-8 text-center text-sm text-muted-foreground">
-                    No records available for this page.
-                  </TableCell>
+                  <TableHead className="w-14">#</TableHead>
+                  <TableHead>User ID</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Contact No</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Registration Date</TableHead>
+                  <TableHead>Status</TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {items.map((member, index) => (
+                  <TableRow key={`${member.userId}-${index}`}>
+                    <TableCell className="font-medium">{(page - 1) * PAGE_SIZE + index + 1}</TableCell>
+                    <TableCell className="font-medium text-primary">{member.userId}</TableCell>
+                    <TableCell>{member.name || "-"}</TableCell>
+                    <TableCell>{member.contactNo || "-"}</TableCell>
+                    <TableCell className="max-w-[200px] truncate" title={member.email}>
+                      {member.email}
+                    </TableCell>
+                    <TableCell>{toDateLabel(member.registrationDate)}</TableCell>
+                    <TableCell>
+                      <Badge variant={member.status === "ACTIVE" ? "default" : "secondary"}>
+                        {member.status}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
 
-          <div className="flex items-center justify-between gap-3 border-t pt-3">
+                {!loading && items.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="py-8 text-center text-sm text-muted-foreground">
+                      No records available for this page.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          <div className="flex flex-col gap-3 border-t pt-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs text-muted-foreground">
               Page {page} of {totalPages}
             </p>

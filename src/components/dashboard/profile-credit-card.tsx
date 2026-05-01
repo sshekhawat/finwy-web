@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ChevronRight, Info, Pencil } from "lucide-react";
+import { ChevronRight, Gift, Info, Pencil } from "lucide-react";
 import { apiFetch, getStoredAccessToken } from "@/lib/api-client";
 import {
   displayHandle,
@@ -10,6 +10,7 @@ import {
 } from "@/lib/auth-user";
 import { useAuthStore } from "@/stores/auth-store";
 import { Card, CardContent } from "@/components/ui/card";
+import { ReferralShareDialog } from "@/components/dashboard/referral-share-dialog";
 
 const inr = new Intl.NumberFormat("en-IN", {
   style: "currency",
@@ -54,6 +55,7 @@ export function ProfileCreditCard() {
     available: 0,
     loading: true,
   });
+  const [referralOpen, setReferralOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -144,13 +146,25 @@ export function ProfileCreditCard() {
               {credit.loading ? "…" : inr.format(credit.available)}
             </span>
           </p>
-          <button
-            type="button"
-            className="mt-4 inline-flex items-center gap-1 rounded-lg bg-[#4A76A8] px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-[#3d6590]"
-          >
-            Get Cash
-            <ChevronRight className="size-4 opacity-90" strokeWidth={2} />
-          </button>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg bg-[#4A76A8] px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-[#3d6590] min-w-[7rem]"
+            >
+              Get Cash
+              <ChevronRight className="size-4 opacity-90" strokeWidth={2} />
+            </button>
+            {user?.publicUserId?.trim() ? (
+              <button
+                type="button"
+                onClick={() => setReferralOpen(true)}
+                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-teal-600 bg-white px-3 py-2 text-sm font-semibold text-teal-800 shadow-sm transition hover:bg-teal-50 min-w-[7rem]"
+              >
+                <Gift className="size-4 shrink-0" strokeWidth={2} />
+                Referral
+              </button>
+            ) : null}
+          </div>
         </div>
 
         <div className="mt-3 w-full rounded-2xl bg-[#f5f5f5] p-4 text-left">
@@ -170,6 +184,7 @@ export function ProfileCreditCard() {
           </div>
         </div>
       </CardContent>
+      <ReferralShareDialog open={referralOpen} onOpenChange={setReferralOpen} />
     </Card>
   );
 }
