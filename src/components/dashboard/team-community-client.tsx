@@ -227,11 +227,10 @@ export function TeamCommunityClient() {
   const headingRoot = resolvedRootUserId || dataRootKey;
 
   return (
-    <div className="space-y-5">
+    <div className="min-w-0 space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Team Community</h1>
-          <p className="text-sm text-slate-600">Explore your level tree, open member lists, and drill into any user&apos;s network.</p>
         </div>
         {viewingOtherRoot ? (
           <div className="flex flex-wrap items-center gap-2">

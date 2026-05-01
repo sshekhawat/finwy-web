@@ -3,7 +3,18 @@
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { BadgeIndianRupee, Building, ChartNoAxesColumn, FileCheck2, LayoutDashboard, LogOut, ShieldCheck, User, Users } from "lucide-react";
+import {
+  BadgeIndianRupee,
+  Building,
+  ChartNoAxesColumn,
+  FileCheck2,
+  KeyRound,
+  LayoutDashboard,
+  LogOut,
+  ShieldCheck,
+  User,
+  Users,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logoutSession } from "@/lib/api-client";
 import { useAuthStore } from "@/stores/auth-store";
@@ -28,6 +39,7 @@ export function DashboardShell({
     { href: "/dashboard/profile/bank", label: "Bank", icon: Building },
     { href: "/dashboard/profile/business-details", label: "Business Details", icon: FileCheck2 },
     { href: "/dashboard/profile/personal-details", label: "Personal Details", icon: User },
+    { href: "/dashboard/profile/change-password", label: "Change password", icon: KeyRound },
   ];
   const communityLinks = [
     { href: "/dashboard/community/my-community", label: "My Community", icon: Users },
@@ -55,10 +67,10 @@ export function DashboardShell({
         onToggle={() => setCollapsed((prev) => !prev)}
         onLogout={handleLogout}
       />
-      <main className="flex-1 px-4 pb-24 pt-4 lg:px-6 lg:pb-6">
+      <main className="min-w-0 flex-1 px-4 pb-24 pt-4 lg:px-6 lg:pb-6">
         <DashboardHeader onOpenMobileMenu={() => setMobileMenuOpen(true)} />
         <KycPendingBanner />
-        <div className="mt-4">{children}</div>
+        <div className="mt-4 min-w-0">{children}</div>
       </main>
 
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>

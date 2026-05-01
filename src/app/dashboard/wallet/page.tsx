@@ -1,254 +1,305 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { ArrowLeft, Copy, CreditCard, Info, Search, Wallet2 } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Loader2, Search } from "lucide-react";
+import { toast } from "sonner";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { apiFetch, isApiConfigured } from "@/lib/api-client";
+import { getApiBaseUrl } from "@/lib/config";
 
-type Screen = "wallet" | "gateway" | "history";
 type StatusFilter = "ALL" | "APPROVED" | "PENDING" | "REJECTED";
 
-const minAmount = 250;
-const maxAmount = 4000;
-const quickAmounts = [500, 1000, 1500, 2000];
+const HISTORY_PAGE_SIZE = 10;
+const RECENT_LIMIT = 5;
 
-const historyRows: Array<{ id: string; status: Exclude<StatusFilter, "ALL"> }> = [];
+type WalletSummary = {
+  pinWallet: string;
+};
+
+type WalletTx = {
+  uuid: string;
+  amount: string;
+  screenshotUrl: string | null;
+  status: number;
+  createdDate: string;
+};
+
+type ApiSuccess<T> = { success: true; data: T };
+type ApiErr = { success?: boolean; error?: { message?: string } };
+
+function parseApiData<T>(res: Response, json: unknown): T {
+  if (!res.ok) {
+    const err = json as ApiErr;
+    throw new Error(err.error?.message ?? `Request failed (${res.status})`);
+  }
+  const body = json as ApiSuccess<T> | T;
+  if (body && typeof body === "object" && "success" in body && (body as ApiSuccess<T>).success === true) {
+    return (body as ApiSuccess<T>).data;
+  }
+  return body as T;
+}
+
+const inr = new Intl.NumberFormat("en-IN", {
+  style: "currency",
+  currency: "INR",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+function formatInr(value: string | number): string {
+  const n = typeof value === "string" ? Number.parseFloat(value) : value;
+  if (!Number.isFinite(n)) return inr.format(0);
+  return inr.format(n);
+}
+
+function txStatusLabel(status: number): Exclude<StatusFilter, "ALL"> {
+  if (status === 2) return "APPROVED";
+  if (status === 3) return "REJECTED";
+  return "PENDING";
+}
+
+function backendAssetUrl(relative: string | null | undefined): string | null {
+  if (!relative) return null;
+  if (relative.startsWith("http")) return relative;
+  const base = getApiBaseUrl();
+  if (base.startsWith("http")) {
+    try {
+      const u = new URL(base);
+      return `${u.protocol}//${u.host}${relative}`;
+    } catch {
+      return relative;
+    }
+  }
+  return relative;
+}
 
 export default function WalletPage() {
-  const [screen, setScreen] = useState<Screen>("wallet");
-  const [amount, setAmount] = useState<number>(250);
+  const [showHistory, setShowHistory] = useState(false);
   const [filter, setFilter] = useState<StatusFilter>("ALL");
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [page, setPage] = useState(1);
 
-  const filteredRows = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return historyRows.filter((row) => {
-      if (filter !== "ALL" && row.status !== filter) return false;
-      if (!q) return true;
-      return row.id.toLowerCase().includes(q);
-    });
-  }, [filter, query]);
+  const [summary, setSummary] = useState<WalletSummary | null>(null);
+  const [recentTx, setRecentTx] = useState<WalletTx[]>([]);
+  const [historyItems, setHistoryItems] = useState<WalletTx[]>([]);
+  const [historyTotal, setHistoryTotal] = useState(0);
 
-  const pageRows = filteredRows.slice((page - 1) * 10, page * 10);
-  const totalPages = Math.max(1, Math.ceil(filteredRows.length / 10));
+  const [loadingSummary, setLoadingSummary] = useState(false);
+  const [loadingRecent, setLoadingRecent] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
-  const screenTabs: Array<{ key: Screen; label: string }> = [
-    { key: "wallet", label: "Wallet" },
-    { key: "gateway", label: "Payment Gateway" },
-    { key: "history", label: "Upload History" },
-  ];
+  const loadSummary = useCallback(async () => {
+    if (!isApiConfigured()) {
+      setSummary(null);
+      return;
+    }
+    setLoadingSummary(true);
+    try {
+      const res = await apiFetch("/profile/wallet/summary");
+      const json = await res.json().catch(() => ({}));
+      setSummary(parseApiData<WalletSummary>(res, json));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not load wallet summary");
+      setSummary(null);
+    } finally {
+      setLoadingSummary(false);
+    }
+  }, []);
+
+  const loadRecent = useCallback(async () => {
+    if (!isApiConfigured()) {
+      setRecentTx([]);
+      return;
+    }
+    setLoadingRecent(true);
+    try {
+      const qs = new URLSearchParams({ page: "1", limit: String(RECENT_LIMIT), status: "ALL" });
+      const res = await apiFetch(`/profile/wallet/transactions?${qs.toString()}`);
+      const json = await res.json().catch(() => ({}));
+      const data = parseApiData<{ items: WalletTx[] }>(res, json);
+      setRecentTx(data.items ?? []);
+    } catch {
+      setRecentTx([]);
+    } finally {
+      setLoadingRecent(false);
+    }
+  }, []);
+
+  const loadHistory = useCallback(async () => {
+    if (!isApiConfigured()) {
+      setHistoryItems([]);
+      setHistoryTotal(0);
+      return;
+    }
+    setLoadingHistory(true);
+    try {
+      const qs = new URLSearchParams({
+        page: String(page),
+        limit: String(HISTORY_PAGE_SIZE),
+        status: filter,
+      });
+      const q = debouncedQuery.trim();
+      if (q) qs.set("search", q);
+      const res = await apiFetch(`/profile/wallet/transactions?${qs.toString()}`);
+      const json = await res.json().catch(() => ({}));
+      const data = parseApiData<{ items: WalletTx[]; total: number }>(res, json);
+      setHistoryItems(data.items ?? []);
+      setHistoryTotal(data.total ?? 0);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not load history");
+      setHistoryItems([]);
+      setHistoryTotal(0);
+    } finally {
+      setLoadingHistory(false);
+    }
+  }, [page, filter, debouncedQuery]);
+
+  const apiWarnedRef = useRef(false);
+  useEffect(() => {
+    if (!isApiConfigured()) {
+      if (!apiWarnedRef.current) {
+        apiWarnedRef.current = true;
+        toast.error("Set NEXT_PUBLIC_API_URL in .env.local to use wallet APIs.");
+      }
+      return;
+    }
+    void loadSummary();
+    void loadRecent();
+  }, [loadSummary, loadRecent]);
+
+  useEffect(() => {
+    if (!showHistory) return;
+    const t = window.setTimeout(() => setDebouncedQuery(query), 400);
+    return () => window.clearTimeout(t);
+  }, [query, showHistory]);
+
+  useEffect(() => {
+    if (!showHistory) return;
+    void loadHistory();
+  }, [showHistory, loadHistory]);
+
+  const totalPages = Math.max(1, Math.ceil(historyTotal / HISTORY_PAGE_SIZE));
+  const creditsDebits = useMemo(() => {
+    let credits = 0;
+    for (const t of recentTx) {
+      const a = Number.parseFloat(t.amount);
+      if (t.status === 2 && Number.isFinite(a) && a > 0) credits += a;
+    }
+    return { credits, debits: 0 };
+  }, [recentTx]);
+
+  const pinDisplay = summary ? formatInr(summary.pinWallet) : isApiConfigured() ? "..." : formatInr(0);
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-5 pb-4">
       <div className="space-y-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Wallet</h1>
-          <p className="text-sm text-slate-600">Manage balance, add money, and track wallet uploads.</p>
-        </div>
-
-        <div className="flex flex-wrap gap-2 rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm">
-          {screenTabs.map((tab) => (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => setScreen(tab.key)}
-              className={cn(
-                "rounded-lg px-3 py-2 text-sm font-medium transition",
-                screen === tab.key
-                  ? "bg-[#6C63FF]/15 text-[#6C63FF]"
-                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
-              )}
-            >
-              {tab.label}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Wallet</h1>
+          </div>
+          <Link href="/dashboard/wallet/add">
+            <Button className="h-10 bg-[#6C63FF] px-4 text-sm font-semibold text-white hover:bg-[#5a52e8]">Add Wallet</Button>
+          </Link>
         </div>
       </div>
 
-      {screen === "wallet" ? (
+      {!showHistory ? (
         <>
-          <Card className="border border-slate-200 bg-white shadow-sm">
-            <CardContent className="p-5">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="inline-flex items-center gap-2 text-lg font-semibold leading-none text-slate-900">
-                    <Wallet2 className="size-5 text-[#6C63FF]" />
-                    Balance
-                  </p>
-                  <p className="mt-2 text-base text-slate-500">Main Wallet</p>
-                </div>
-                <div className="rounded-xl bg-slate-50 px-4 py-3 text-left sm:text-right">
-                  <p className="text-2xl font-semibold text-emerald-600">₹0.00</p>
-                  <p className="mt-1 text-sm text-slate-500">Main Wallet: ₹0.00</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border border-slate-200 bg-white shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-xl">Add Money to Wallet</CardTitle>
-              <CardDescription>Top up instantly and use it for scan and pay.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 p-4">
-              <div className="rounded-lg bg-sky-50 px-4 py-3 text-sm font-medium text-sky-800 ring-1 ring-sky-100">
-                Use it for Scan &amp; Pay
-              </div>
-
-              <div>
-                <p className="mb-2 text-sm font-medium text-slate-700">Enter Amount</p>
-                <Input
-                  value={`₹ ${amount}`}
-                  inputMode="numeric"
-                  onChange={(e) => {
-                    const n = Number.parseInt(e.target.value.replace(/\D/g, ""), 10);
-                    if (!Number.isNaN(n)) setAmount(Math.max(minAmount, Math.min(maxAmount, n)));
-                  }}
-                  className="h-12 text-lg"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {quickAmounts.map((a) => (
-                  <button
-                    key={a}
-                    type="button"
-                    className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium text-slate-800 transition hover:bg-slate-50"
-                    onClick={() => setAmount(Math.max(minAmount, Math.min(maxAmount, a)))}
-                  >
-                    + ₹{a}
-                  </button>
-                ))}
-              </div>
-
-              <div className="space-y-0.5 text-slate-600">
-                <p className="inline-flex items-center gap-1 text-sm font-medium">
-                  <Info className="size-4" /> Minimum Amount ₹{minAmount}
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Card className="border border-slate-200 bg-white shadow-sm">
+              <CardContent className="p-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Available balance</p>
+                <p className="mt-1 text-xl font-semibold text-emerald-700">
+                  {loadingSummary ? (
+                    <span className="inline-flex items-center gap-2 text-slate-500">
+                      <Loader2 className="size-5 animate-spin" /> Loading...
+                    </span>
+                  ) : (
+                    pinDisplay
+                  )}
                 </p>
-                <p className="text-sm">You can add up to ₹{maxAmount}</p>
-              </div>
-
-              <Button
-                className="h-11 w-full bg-[#6C63FF] text-sm font-semibold hover:bg-[#5a52e8]"
-                onClick={() => setScreen("gateway")}
-              >
-                Add Money to Wallet
-              </Button>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+            <Card className="border border-slate-200 bg-white shadow-sm">
+              <CardContent className="p-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Total credits</p>
+                <p className="mt-1 text-xl font-semibold text-slate-900">{formatInr(creditsDebits.credits)}</p>
+                <p className="mt-1 text-xs text-slate-500">Approved top-ups only (last {RECENT_LIMIT})</p>
+              </CardContent>
+            </Card>
+            <Card className="border border-slate-200 bg-white shadow-sm">
+              <CardContent className="p-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Total debits</p>
+                <p className="mt-1 text-xl font-semibold text-slate-900">{formatInr(creditsDebits.debits)}</p>
+              </CardContent>
+            </Card>
+          </div>
 
           <Card className="border border-slate-200 bg-white shadow-sm">
             <CardContent className="space-y-3 p-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-xl font-semibold text-slate-900">Transaction History</h3>
+                <h3 className="text-xl font-semibold text-slate-900">Wallet activity</h3>
                 <button
                   type="button"
-                  onClick={() => setScreen("history")}
+                  onClick={() => {
+                    setShowHistory(true);
+                    setPage(1);
+                  }}
                   className="rounded-full bg-[#6C63FF] px-3 py-1 text-xs font-medium text-white"
                 >
-                  See All
+                  See all
                 </button>
               </div>
-              <div className="rounded-xl border border-slate-200 p-6 text-center text-base text-slate-500">
-                No recent transactions
-              </div>
-            </CardContent>
-          </Card>
-        </>
-      ) : null}
-
-      {screen === "gateway" ? (
-        <>
-          <Card className="border border-slate-200 bg-white shadow-sm">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={() => setScreen("wallet")}
-                  className="inline-flex items-center gap-2 text-sm font-medium text-slate-700 hover:text-slate-900"
-                >
-                  <ArrowLeft className="size-4" />
-                  Back
-                </button>
-                <button type="button" className="inline-flex items-center gap-1 text-sm font-medium text-slate-600">
-                  <Info className="size-4" />
-                  Help
-                </button>
-              </div>
-              <CardTitle className="inline-flex items-center gap-2 text-xl">
-                <CreditCard className="size-5 text-[#6C63FF]" />
-                Payment Gateway
-              </CardTitle>
-              <CardDescription>Scan this QR with any UPI app.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-5 p-4">
-              <div className="space-y-2 text-center">
-                <div className="mx-auto grid size-10 place-items-center rounded-md border border-slate-200 bg-white">
-                  <span className="text-sm font-semibold text-[#6C63FF]">A</span>
+              {loadingRecent ? (
+                <div className="flex justify-center py-8 text-slate-500">
+                  <Loader2 className="size-8 animate-spin" />
                 </div>
-                <p className="text-2xl font-semibold text-slate-900">Axis Bank - 3121</p>
-              </div>
-
-              <div className="mx-auto flex w-fit items-center gap-1.5">
-                <span className="size-1.5 rounded-full bg-slate-300" />
-                <span className="h-1.5 w-5 rounded-full bg-slate-900" />
-                <span className="size-1.5 rounded-full bg-slate-300" />
-              </div>
-
-              <div className="mx-auto w-full max-w-[320px]">
-                <img
-                  src="https://api.qrserver.com/v1/create-qr-code/?size=640x640&data=finwy-wallet"
-                  alt="Payment QR"
-                  width={320}
-                  height={320}
-                  className="h-auto w-full rounded-md border border-slate-200"
-                />
-              </div>
-
-              <div className="flex items-center justify-center gap-2 text-center">
-                <p className="text-xl font-medium text-slate-500">UPI ID: vs1190@ybl</p>
-                <button type="button" className="text-slate-500 hover:text-slate-700" aria-label="Copy UPI ID">
-                  <Copy className="size-4" />
-                </button>
-              </div>
-
-              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-center text-sm text-slate-500">
-                Amount: ₹{amount}
-              </div>
-
-              <Button className="h-11 w-full bg-[#6C63FF] text-sm font-semibold hover:bg-[#5a52e8]">
-                Upload Screenshot
-              </Button>
+              ) : recentTx.length === 0 ? (
+                <div className="rounded-xl border border-slate-200 p-6 text-center text-base text-slate-500">No recent transactions</div>
+              ) : (
+                <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200">
+                  {recentTx.map((row) => (
+                    <li key={row.uuid} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
+                      <div>
+                        <p className="font-medium text-slate-900">+ {formatInr(row.amount)}</p>
+                        <p className="text-xs text-slate-500">{new Date(row.createdDate).toLocaleString()}</p>
+                      </div>
+                      <span
+                        className={cn(
+                          "rounded-full px-2 py-0.5 text-xs font-semibold",
+                          txStatusLabel(row.status) === "APPROVED"
+                            ? "bg-emerald-100 text-emerald-800"
+                            : txStatusLabel(row.status) === "REJECTED"
+                              ? "bg-rose-100 text-rose-800"
+                              : "bg-amber-100 text-amber-900",
+                        )}
+                      >
+                        {txStatusLabel(row.status)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </CardContent>
           </Card>
-
-          <div className="flex justify-end">
-            <Button variant="outline" onClick={() => setScreen("history")}>
-              View Upload History
-            </Button>
-          </div>
         </>
-      ) : null}
-
-      {screen === "history" ? (
+      ) : (
         <>
           <Card className="border border-slate-200 bg-white shadow-sm">
-            <CardHeader className="pb-3">
+            <CardContent className="space-y-3 p-4">
               <button
                 type="button"
-                onClick={() => setScreen("wallet")}
+                onClick={() => setShowHistory(false)}
                 className="inline-flex items-center gap-2 text-sm font-medium text-slate-700 hover:text-slate-900"
               >
-                <ArrowLeft className="size-4" />
                 Back
               </button>
-              <CardTitle className="text-xl">Upload History</CardTitle>
-              <CardDescription>Search and filter wallet screenshot uploads.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3 p-4">
+
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
                 <Input
@@ -257,7 +308,7 @@ export default function WalletPage() {
                     setQuery(e.target.value);
                     setPage(1);
                   }}
-                  placeholder="Search by Transaction ID"
+                  placeholder="Search by reference, UPI, or note"
                   className="h-11 pl-9"
                 />
               </div>
@@ -271,44 +322,126 @@ export default function WalletPage() {
                       setFilter(s);
                       setPage(1);
                     }}
-                    className={cn(
-                      "rounded-full px-3 py-1 text-xs font-semibold",
-                      filter === s
-                        ? "bg-[#6C63FF] text-white"
-                        : "bg-slate-100 text-slate-700",
-                    )}
+                    className={cn("rounded-full px-3 py-1 text-xs font-semibold", filter === s ? "bg-[#6C63FF] text-white" : "bg-slate-100 text-slate-700")}
                   >
                     {s}
                   </button>
                 ))}
               </div>
 
-              <div className="min-h-[260px] rounded-md border border-dashed border-slate-200 p-4 text-center text-sm text-slate-500">
-                {pageRows.length === 0 ? "No upload history found." : "Loaded"}
+              <div className="min-h-[260px] rounded-md border border-dashed border-slate-200 p-0 text-sm text-slate-500">
+                {loadingHistory ? (
+                  <div className="flex h-[260px] items-center justify-center">
+                    <Loader2 className="size-8 animate-spin text-slate-400" />
+                  </div>
+                ) : historyItems.length === 0 ? (
+                  <div className="flex h-[260px] items-center justify-center p-4 text-center">No history found.</div>
+                ) : (
+                  <>
+                    <div className="divide-y divide-slate-100 md:hidden">
+                      {historyItems.map((row, i) => {
+                        const img = backendAssetUrl(row.screenshotUrl);
+                        return (
+                          <div key={row.uuid} className="space-y-2 px-3 py-3">
+                            <div className="flex items-center justify-between gap-3">
+                              <p className="text-xs font-medium text-slate-500">#{(page - 1) * HISTORY_PAGE_SIZE + i + 1}</p>
+                              <span
+                                className={cn(
+                                  "rounded-full px-2 py-0.5 text-xs font-semibold",
+                                  txStatusLabel(row.status) === "APPROVED"
+                                    ? "bg-emerald-100 text-emerald-800"
+                                    : txStatusLabel(row.status) === "REJECTED"
+                                      ? "bg-rose-100 text-rose-800"
+                                      : "bg-amber-100 text-amber-900",
+                                )}
+                              >
+                                {txStatusLabel(row.status)}
+                              </span>
+                            </div>
+                            <p className="truncate font-mono text-xs text-slate-600">{row.uuid}</p>
+                            <p className="text-sm font-semibold text-slate-900">{formatInr(row.amount)}</p>
+                            <p className="text-xs text-slate-500">{new Date(row.createdDate).toLocaleString()}</p>
+                            {img ? (
+                              <a href={img} target="_blank" rel="noreferrer" className="text-xs font-medium text-[#6C63FF] hover:underline">
+                                View Screenshot
+                              </a>
+                            ) : (
+                              <p className="text-xs text-slate-400">No screenshot</p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="hidden overflow-x-auto md:block">
+                      <table className="w-full min-w-[640px] text-left text-sm">
+                        <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase text-slate-600">
+                          <tr>
+                            <th className="px-3 py-2">#</th>
+                            <th className="px-3 py-2">Reference</th>
+                            <th className="px-3 py-2">Amount</th>
+                            <th className="px-3 py-2">Status</th>
+                            <th className="px-3 py-2">Date</th>
+                            <th className="px-3 py-2">Screenshot</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {historyItems.map((row, i) => {
+                            const img = backendAssetUrl(row.screenshotUrl);
+                            return (
+                              <tr key={row.uuid} className="text-slate-800">
+                                <td className="px-3 py-2">{(page - 1) * HISTORY_PAGE_SIZE + i + 1}</td>
+                                <td className="max-w-[140px] truncate px-3 py-2 font-mono text-xs">{row.uuid}</td>
+                                <td className="px-3 py-2 font-medium">{formatInr(row.amount)}</td>
+                                <td className="px-3 py-2">
+                                  <span
+                                    className={cn(
+                                      "rounded-full px-2 py-0.5 text-xs font-semibold",
+                                      txStatusLabel(row.status) === "APPROVED"
+                                        ? "bg-emerald-100 text-emerald-800"
+                                        : txStatusLabel(row.status) === "REJECTED"
+                                          ? "bg-rose-100 text-rose-800"
+                                          : "bg-amber-100 text-amber-900",
+                                    )}
+                                  >
+                                    {txStatusLabel(row.status)}
+                                  </span>
+                                </td>
+                                <td className="whitespace-nowrap px-3 py-2 text-xs text-slate-600">{new Date(row.createdDate).toLocaleString()}</td>
+                                <td className="px-3 py-2">
+                                  {img ? (
+                                    <a href={img} target="_blank" rel="noreferrer" className="text-[#6C63FF] hover:underline">
+                                      View
+                                    </a>
+                                  ) : (
+                                    "-"
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
               </div>
             </CardContent>
           </Card>
 
           <div className="flex items-center justify-center gap-3">
-            <Button
-              variant="outline"
-              disabled={page <= 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-            >
+            <Button variant="outline" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
               Prev
             </Button>
             <p className="text-base font-semibold text-slate-800">
               Page {page} / {totalPages}
             </p>
-            <Button
-              disabled={page >= totalPages}
-              onClick={() => setPage((p) => Math.min(Math.max(1, totalPages), p + 1))}
-            >
+            <Button disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
               Next
             </Button>
           </div>
         </>
-      ) : null}
+      )}
     </div>
   );
 }

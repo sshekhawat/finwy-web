@@ -1,6 +1,5 @@
 "use client";
 
-import { Plus, Send, Wallet } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProfileCreditCard } from "@/components/dashboard/profile-credit-card";
 
@@ -13,31 +12,6 @@ export function RightPanelRest() {
         </CardHeader>
         <CardContent>
           <p className="text-3xl font-semibold tabular-nums text-slate-900">₹0</p>
-        </CardContent>
-      </Card>
-
-      <Card className="border border-slate-200 bg-white shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-base">Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-2">
-          {[
-            { label: "Send", icon: Send },
-            { label: "Receive", icon: Wallet },
-            { label: "Top-up", icon: Plus },
-            { label: "Link account", icon: Plus },
-          ].map((action) => {
-            const Icon = action.icon;
-            return (
-              <button
-                key={action.label}
-                className="flex items-center justify-center gap-1 rounded-xl border border-slate-200 bg-slate-50 px-2 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
-              >
-                <Icon className="size-3.5" />
-                {action.label}
-              </button>
-            );
-          })}
         </CardContent>
       </Card>
 

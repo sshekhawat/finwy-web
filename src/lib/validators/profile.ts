@@ -15,11 +15,7 @@ export const kycSubmitFormSchema = z.object({
   pancard: z
     .string()
     .transform((s) => s.replace(/[\s-]/g, "").toUpperCase())
-    .pipe(
-      z
-        .string()
-        .regex(/^[A-Z]{5}[0-9]{4}[A-Z]$/, "Enter a valid PAN (e.g. BQYPS0756F)."),
-    ),
+    .optional(),
   aadhaar: z
     .string()
     .transform((s) => s.replace(/\D/g, ""))

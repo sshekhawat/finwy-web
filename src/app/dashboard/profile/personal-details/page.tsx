@@ -1,24 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import type { z } from "zod";
 import { toast } from "sonner";
-import { apiFetch, isApiConfigured, logoutSession } from "@/lib/api-client";
+import { apiFetch, isApiConfigured } from "@/lib/api-client";
 import { readApiError } from "@/lib/auth-http";
 import {
   personalDetailsFromAuthMe,
   unwrapPersonalDetails,
   type PersonalDetailsPayload,
 } from "@/lib/personal-profile";
-import { changePasswordSchema } from "@/lib/validators/profile";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-
-type PasswordForm = z.infer<typeof changePasswordSchema>;
 
 function dash(v: string | null | undefined): string {
   const s = v?.trim();
@@ -35,19 +26,9 @@ function InfoLine({ label, value }: { label: string; value: string }) {
 }
 
 export default function PersonalDetailsPage() {
-  const [saving, setSaving] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [personal, setPersonal] = useState<PersonalDetailsPayload | null>(null);
   const [infoHint, setInfoHint] = useState<string | null>(null);
-
-  const form = useForm<PasswordForm>({
-    resolver: zodResolver(changePasswordSchema),
-    defaultValues: {
-      oldPassword: "",
-      newPassword: "",
-      confirmPassword: "",
-    },
-  });
 
   const loadPersonal = useCallback(async () => {
     if (!isApiConfigured()) {
@@ -105,37 +86,10 @@ export default function PersonalDetailsPage() {
     void loadPersonal();
   }, [loadPersonal]);
 
-  async function onSubmitPassword(values: PasswordForm) {
-    setSaving(true);
-    try {
-      const res = await apiFetch("/profile/change-password", {
-        method: "PUT",
-        body: JSON.stringify(values),
-      });
-      const json = (await res.json().catch(() => ({}))) as {
-        success?: boolean;
-        data?: { message?: string };
-        error?: { message?: string };
-      };
-      if (!res.ok) {
-        throw new Error(json.error?.message ?? "Failed to update password");
-      }
-      toast.success(json.data?.message ?? "Password changed successfully");
-      form.reset();
-      await logoutSession();
-      window.location.href = "/login";
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update password");
-    } finally {
-      setSaving(false);
-    }
-  }
-
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Personal Details</h1>
-        <p className="text-sm text-muted-foreground">Your account information and password settings.</p>
       </div>
 
       <Card>
@@ -172,37 +126,6 @@ export default function PersonalDetailsPage() {
                 "Could not load profile. Confirm NEXT_PUBLIC_API_URL and that the backend exposes GET /profile/personal."}
             </p>
           )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Change password</CardTitle>
-          <CardDescription>Use your current password to set a new secure password.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form className="grid gap-4 sm:grid-cols-2" onSubmit={form.handleSubmit(onSubmitPassword)}>
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="oldPassword">Current password</Label>
-              <Input id="oldPassword" type="password" autoComplete="current-password" {...form.register("oldPassword")} />
-              <p className="text-xs text-destructive">{form.formState.errors.oldPassword?.message}</p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="newPassword">New password</Label>
-              <Input id="newPassword" type="password" autoComplete="new-password" {...form.register("newPassword")} />
-              <p className="text-xs text-destructive">{form.formState.errors.newPassword?.message}</p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm new password</Label>
-              <Input id="confirmPassword" type="password" autoComplete="new-password" {...form.register("confirmPassword")} />
-              <p className="text-xs text-destructive">{form.formState.errors.confirmPassword?.message}</p>
-            </div>
-            <div className="sm:col-span-2">
-              <Button type="submit" disabled={saving}>
-                {saving ? "Updating…" : "Update password"}
-              </Button>
-            </div>
-          </form>
         </CardContent>
       </Card>
     </div>

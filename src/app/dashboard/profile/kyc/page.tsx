@@ -44,7 +44,7 @@ function unwrapKyc(json: unknown): KycState | null {
   const root = json as KycResponse;
   const d = root.success ? root.data : (json as KycState);
   if (!d || typeof d !== "object") return null;
-  if ("kycStatusLabel" in d || "pancard" in d) return d as KycState;
+  if ("kycStatusLabel" in d || "aadhaar" in d) return d as KycState;
   return null;
 }
 
@@ -120,7 +120,6 @@ export default function KycPage() {
   const [aadhaarBack, setAadhaarBack] = useState<File | null>(null);
   const [panDoc, setPanDoc] = useState<File | null>(null);
   const [panScreenshot, setPanScreenshot] = useState<File | null>(null);
-
   const form = useForm<KycSubmitForm>({
     resolver: zodResolver(kycSubmitFormSchema),
     defaultValues: { pancard: "", aadhaar: "" },
@@ -167,20 +166,20 @@ export default function KycPage() {
       toast.message("KYC is locked while under review or after approval.");
       return;
     }
-    if (!aadhaarFront || !aadhaarBack || !panDoc || !panScreenshot) {
-      toast.error("Please upload all four images: Aadhaar front, back, PAN card, and PAN screenshot.");
+    if (!aadhaarFront || !aadhaarBack) {
+      toast.error("Please upload Aadhaar front and back images.");
       return;
     }
 
     setSaving(true);
     try {
       const fd = new FormData();
-      fd.set("pancard", values.pancard);
+      fd.set("pancard", values.pancard ?? "");
       fd.set("aadhaar", values.aadhaar);
       fd.set("aadhaarFront", aadhaarFront);
       fd.set("aadhaarBack", aadhaarBack);
-      fd.set("panDoc", panDoc);
-      fd.set("panScreenshot", panScreenshot);
+      if (panDoc) fd.set("panDoc", panDoc);
+      if (panScreenshot) fd.set("panScreenshot", panScreenshot);
 
       const res = await apiFetch("/profile/kyc/submit", {
         method: "POST",
@@ -253,7 +252,8 @@ export default function KycPage() {
         <CardHeader>
           <CardTitle>KYC verification</CardTitle>
           <CardDescription>
-            आधार (Aadhaar) — number plus clear photos of the front and back of the card. PAN — card photo and screenshot.
+            आधार (Aadhaar) — number plus clear photos of the front and back of the card.
+            PAN card and PAN screenshot are optional.
             JPEG / PNG / WebP, max 5 MB each.
           </CardDescription>
         </CardHeader>
@@ -300,14 +300,14 @@ export default function KycPage() {
             </section>
 
             <section className="space-y-4 border-t border-slate-100 pt-6">
-              <h2 className="text-sm font-semibold text-slate-900">PAN</h2>
+              <h2 className="text-sm font-semibold text-slate-900">PAN (Optional)</h2>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2 sm:col-span-2">
-                  <Label htmlFor="pan">PAN number</Label>
+                  <Label htmlFor="pan">PAN number (optional)</Label>
                   <Input
                     id="pan"
                     autoComplete="off"
-                    placeholder="BQYPS0756F"
+                    placeholder="Enter PAN if available"
                     className="font-mono uppercase tracking-wide"
                     disabled={!canSubmit || loading}
                     {...form.register("pancard", {
@@ -315,14 +315,11 @@ export default function KycPage() {
                         typeof v === "string" ? v.replace(/[\s-]/g, "").toUpperCase() : "",
                     })}
                   />
-                  {form.formState.errors.pancard ? (
-                    <p className="text-xs text-destructive">{form.formState.errors.pancard.message}</p>
-                  ) : null}
                 </div>
                 <FileRow
                   id="pd"
-                  label="PAN card (photo)"
-                  hint="Legible image of the physical / PDF card"
+                  label="PAN card (optional)"
+                  hint="Upload if available"
                   file={panDoc}
                   onChange={setPanDoc}
                   existingUrl={kyc?.panDocUrl ?? null}
@@ -330,8 +327,8 @@ export default function KycPage() {
                 />
                 <FileRow
                   id="ps"
-                  label="PAN — screenshot"
-                  hint="App / portal screenshot if applicable"
+                  label="PAN screenshot (optional)"
+                  hint="Upload if available"
                   file={panScreenshot}
                   onChange={setPanScreenshot}
                   existingUrl={kyc?.panScreenshotUrl ?? null}

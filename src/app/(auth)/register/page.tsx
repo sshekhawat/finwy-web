@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -48,8 +48,9 @@ function RequiredStar() {
   );
 }
 
-export default function RegisterPage() {
+function RegisterPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [loading, setLoading] = useState(false);
   /** Default true so the form never sits in a blocked “loading” state if the preflight request fails. */
@@ -69,6 +70,16 @@ export default function RegisterPage() {
       childSide: "L",
     },
   });
+
+  useEffect(() => {
+    const fromQuery =
+      searchParams.get("ref")?.trim() ||
+      searchParams.get("referralId")?.trim() ||
+      searchParams.get("sponsor")?.trim();
+    if (fromQuery) {
+      regForm.setValue("referralId", fromQuery);
+    }
+  }, [searchParams, regForm]);
 
   const referralId = regForm.watch("referralId");
   const debouncedReferral = useDebounced(referralId?.trim() ?? "", 450);
@@ -366,5 +377,24 @@ export default function RegisterPage() {
         </Link>
       </p>
     </AuthPageShell>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense
+      fallback={
+        <AuthPageShell>
+          <div className="space-y-3 animate-pulse">
+            <div className="h-8 w-52 rounded-lg bg-slate-200" />
+            <div className="h-4 w-full max-w-md rounded bg-slate-100" />
+            <div className="mt-8 h-11 w-full rounded-xl bg-slate-100" />
+            <div className="h-11 w-full rounded-xl bg-slate-100" />
+          </div>
+        </AuthPageShell>
+      }
+    >
+      <RegisterPageContent />
+    </Suspense>
   );
 }

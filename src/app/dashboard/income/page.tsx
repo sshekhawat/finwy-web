@@ -5,7 +5,6 @@ export default function IncomePage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Income</h1>
-        <p className="text-sm text-muted-foreground">Track rewards, referral income, and payouts.</p>
       </div>
       <Card className="border-0 bg-gradient-to-r from-emerald-500 to-green-600 text-white">
         <CardHeader>
