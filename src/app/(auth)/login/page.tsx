@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -24,6 +24,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+
+/**
+ * When false (default), failed login due to unverified email shows only the API error — no OTP dialog.
+ * Set `NEXT_PUBLIC_ENABLE_LOGIN_EMAIL_OTP=true` in `.env.local` to restore the dialog (code below stays in use).
+ */
+const ENABLE_LOGIN_EMAIL_OTP_DIALOG =
+  process.env.NEXT_PUBLIC_ENABLE_LOGIN_EMAIL_OTP?.trim().toLowerCase() === "true";
 
 type LoginForm = z.infer<typeof loginSchema>;
 
@@ -68,6 +75,8 @@ function isEmailNotVerifiedMessage(msg: string): boolean {
 
 function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const registered = searchParams.get("registered") === "1";
   const next = "/dashboard";
   const setUser = useAuthStore((s) => s.setUser);
   const [loading, setLoading] = useState(false);
@@ -128,6 +137,9 @@ function LoginForm() {
 
       const errMsg = readApiError(json, "Login failed");
       if (res.status === 401 && isEmailNotVerifiedMessage(errMsg)) {
+        if (!ENABLE_LOGIN_EMAIL_OTP_DIALOG) {
+          throw new Error(errMsg);
+        }
         const emailNorm = data.email.trim().toLowerCase();
         setPendingEmail(emailNorm);
         otpForm.reset({ email: emailNorm, otp: "" });
@@ -208,10 +220,20 @@ function LoginForm() {
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-foreground">Welcome back</h1>
           <p className="text-sm text-muted-foreground">
-            Sign in with your email and password. If your email isn’t verified yet, we’ll help you enter the code we
-            sent.
+            {ENABLE_LOGIN_EMAIL_OTP_DIALOG
+              ? "Sign in with your email and password. If your email isn’t verified yet, we’ll help you enter the code we sent."
+              : "Sign in with your email and password."}
           </p>
         </div>
+
+        {registered ? (
+          <div
+            className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-950 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-100"
+            role="status"
+          >
+            Registration successful. Sign in with the email and password you just created.
+          </div>
+        ) : null}
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="mt-8 space-y-5">
           <div className="space-y-2">
@@ -260,7 +282,7 @@ function LoginForm() {
         </div>
       </AuthPageShell>
 
-      <Dialog open={otpOpen} onOpenChange={setOtpOpen}>
+      <Dialog open={ENABLE_LOGIN_EMAIL_OTP_DIALOG && otpOpen} onOpenChange={setOtpOpen}>
         <DialogContent showCloseButton className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Verify your email</DialogTitle>
