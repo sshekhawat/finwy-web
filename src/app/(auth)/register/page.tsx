@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { registerSchema } from "@/lib/validators/auth";
 import type { z } from "zod";
 import { apiFetch, isApiConfigured } from "@/lib/api-client";
-import { readApiError, callResendEmailOtp } from "@/lib/auth-http";
+import { readApiError } from "@/lib/auth-http";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -182,21 +182,10 @@ function RegisterPageContent() {
         if (!res.ok) {
           throw new Error(readApiError(json, "Registration failed"));
         }
-        const emailNorm = data.email.trim().toLowerCase();
-
-        const resent = await callResendEmailOtp(emailNorm);
-        if (!resent.ok) {
-          toast.warning(
-            `Account created. ${resent.message} Use “Resend code” after fixing the issue, or enter the code from the registration email if you received one.`,
-          );
-        } else if (resent.emailDispatched === false) {
-          toast.warning(
-            "Account created. Email was not sent (SMTP not configured on the server). Set SMTP_USER/SMTP_PASS, then tap “Resend code”.",
-          );
-        } else {
-          toast.success(resent.message);
-        }
-        router.push(`/verify-otp?email=${encodeURIComponent(emailNorm)}`);
+        const apiMessage = (json as { data?: { message?: string } }).data?.message;
+        toast.success(apiMessage ?? "Account created.");
+        router.push("/login?registered=1");
+        router.refresh();
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Registration failed");
       } finally {
@@ -234,7 +223,7 @@ function RegisterPageContent() {
         </h1>
         <p className="text-sm text-muted-foreground">
           {requiresReferral
-            ? "Join Finwy with your sponsor’s ID. We’ll email you a code to verify your address."
+            ? "Join Finwy with your sponsor’s ID. After signing up you can sign in on the next screen."
             : "You’re creating the first account on this server — no sponsor ID needed."}
         </p>
       </div>
